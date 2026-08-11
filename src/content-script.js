@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Content Script Bridge
+// ChatGPT Audio Capture — Content Script Bridge & Injector
 
 function cleanTitle(rawTitle) {
   if (!rawTitle) return 'chatgpt-session';
@@ -16,6 +16,14 @@ function extractConversationTitle() {
   return cleanTitle(rawTitle);
 }
 
+function injectMainWorldScript() {
+  if (document.getElementById('chatgpt-recorder-injector')) return;
+  const script = document.createElement('script');
+  script.id = 'chatgpt-recorder-injector';
+  script.src = browser.runtime.getURL('src/page-injector.js');
+  (document.head || document.documentElement).appendChild(script);
+}
+
 if (typeof browser !== 'undefined' && browser.runtime) {
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request && request.type === 'EXTRACT_TITLE') {
@@ -24,3 +32,5 @@ if (typeof browser !== 'undefined' && browser.runtime) {
     return true;
   });
 }
+
+injectMainWorldScript();

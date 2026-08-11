@@ -12,7 +12,8 @@
   ],
   "host_permissions": [
     "*://chatgpt.com/*",
-    "*://*.oaiusercontent.com/*"
+    "*://*.oaiusercontent.com/*",
+    "*://*.openai.com/*"
   ],
   "background": {
     "scripts": ["src/background.js"]
@@ -21,7 +22,13 @@
     {
       "matches": ["*://chatgpt.com/*"],
       "js": ["src/content-script.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/page-injector.js"],
+      "matches": ["*://chatgpt.com/*"]
     }
   ],
   "action": {

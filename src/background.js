@@ -1,10 +1,9 @@
-// ChatGPT Audio Capture — Background Service Script (With Templates)
+// ChatGPT Audio Capture — Background Service (Enhanced Stream & Fallback Bridge)
 
-const TTS_PATTERNS = [
-  '*://chatgpt.com/backend-api/synthesize*',
-  '*://chatgpt.com/backend-api/voice/*',
-  '*://chatgpt.com/backend-api/speech*',
-  '*://*.oaiusercontent.com/*'
+const LISTEN_URLS = [
+  '*://chatgpt.com/*',
+  '*://*.oaiusercontent.com/*',
+  '*://*.openai.com/*'
 ];
 
 const MIME_MAP = {
@@ -24,6 +23,15 @@ const ICONS = {
 };
 
 let sessionCaptureCount = 0;
+
+function isAudioCandidate(details) {
+  const url = (details.url || '').toLowerCase();
+  const type = details.type;
+  if (type === 'media') return true;
+  return url.includes('synthesize') || url.includes('speech') ||
+         url.includes('voice') || url.includes('audio') ||
+         url.includes('.mp3') || url.includes('.wav') || url.includes('.ogg');
+}
 
 function updateBadge() {
   if (typeof browser !== 'undefined' && browser.action) {
@@ -53,18 +61,6 @@ function formatFilename(tmpl, prefix, title, mimeType) {
   return `${name}${ext}`;
 }
 
-function buildPath(subfolder, filename) {
-  return subfolder ? `${subfolder.replace(/\/$/, '')}/${filename}` : filename;
-}
-
-function saveHistory(item) {
-  if (typeof browser === 'undefined' || !browser.storage) return;
-  browser.storage.local.get({ captureHistory: [] }).then((res) => {
-    const list = [item, ...res.captureHistory].slice(0, 20);
-    browser.storage.local.set({ captureHistory: list });
-  });
-}
-
 function triggerDownload(blob, title, mimeType) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
   browser.storage.local.get({
@@ -78,10 +74,9 @@ function triggerDownload(blob, title, mimeType) {
     updateBadge();
     updateIcon('saved');
     const name = formatFilename(s.filenameTemplate, s.filenamePrefix, title, mimeType);
-    const path = buildPath(s.subfolder, name);
+    const path = s.subfolder ? `${s.subfolder.replace(/\/$/, '')}/${name}` : name;
     const url = URL.createObjectURL(blob);
     browser.downloads.download({ url, filename: path, saveAs: false });
-    saveHistory({ id: Date.now(), filename: path, title, timestamp: new Date().toISOString() });
     setTimeout(() => updateIcon('idle'), 3000);
   });
 }
@@ -97,6 +92,7 @@ function processCapturedAudio(blob, tabId, mimeType) {
 }
 
 function setupStreamFilter(details) {
+  if (!isAudioCandidate(details)) return;
   if (typeof browser === 'undefined' || !browser.webRequest.filterResponseData) return;
   updateIcon('recording');
   const filter = browser.webRequest.filterResponseData(details.requestId);
@@ -109,9 +105,9 @@ function setupStreamFilter(details) {
 
   filter.onstop = () => {
     filter.disconnect();
-    const mimeType = 'audio/mpeg';
-    const blob = new Blob(chunks, { type: mimeType });
-    processCapturedAudio(blob, details.tabId, mimeType);
+    if (chunks.length === 0) return;
+    const blob = new Blob(chunks, { type: 'audio/mpeg' });
+    processCapturedAudio(blob, details.tabId, 'audio/mpeg');
   };
 
   filter.onerror = () => {
@@ -123,7 +119,7 @@ function setupStreamFilter(details) {
 if (typeof browser !== 'undefined' && browser.webRequest) {
   browser.webRequest.onBeforeRequest.addListener(
     setupStreamFilter,
-    { urls: TTS_PATTERNS },
+    { urls: LISTEN_URLS },
     ['blocking']
   );
 }
