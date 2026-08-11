@@ -4,6 +4,21 @@ import subprocess
 from pathlib import Path
 
 
+def parse_out_time_sec(line: str) -> float:
+    """Parse out_time_ms or out_time from FFmpeg progress output line."""
+    if line.startswith("out_time_ms="):
+        val = line.split("=")[1].strip()
+        return float(val) / 1000000.0 if val.isdigit() else -1.0
+    if line.startswith("out_time="):
+        parts = line.split("=")[1].strip().split(":")
+        if len(parts) == 3:
+            try:
+                return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+            except ValueError:
+                return -1.0
+    return -1.0
+
+
 def build_ffmpeg_composer_command(
     image_path: Path,
     audio_path: Path,
@@ -46,10 +61,23 @@ def render_video(
     width: int = 1920,
     height: int = 1080,
     fps: int = 30,
+    progress_callback=None,
+    total_duration: float = 0.0,
 ) -> bool:
-    """Execute FFmpeg GPU video render."""
+    """Execute FFmpeg GPU video render with real-time progress parsing."""
     cmd = build_ffmpeg_composer_command(
         image_path, audio_path, subtitle_path, output_video_path, width, height, fps
     )
+    if progress_callback:
+        cmd.extend(["-progress", "pipe:1", "-nostats"])
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in proc.stdout:
+            sec = parse_out_time_sec(line.strip())
+            if sec >= 0 and total_duration > 0:
+                pct = min(99.0, (sec / total_duration) * 100.0)
+                progress_callback(pct, sec)
+        proc.wait()
+        return proc.returncode == 0
+
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result.returncode == 0

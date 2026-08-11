@@ -4,6 +4,19 @@ import subprocess
 from pathlib import Path
 
 
+def get_audio_duration(audio_path: Path) -> float:
+    """Extract audio duration in seconds using ffprobe."""
+    cmd = [
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)
+    ]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return float(res.stdout.strip())
+    except (subprocess.SubprocessError, ValueError):
+        return 0.0
+
+
 def build_audio_mix_command(
     narration_path: Path,
     bgm_path: Path | None,

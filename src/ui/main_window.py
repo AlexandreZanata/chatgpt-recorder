@@ -9,20 +9,21 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from src.engine.audio_mixer import mix_audio_tracks
+from src.engine.audio_mixer import get_audio_duration, mix_audio_tracks
 from src.engine.video_composer import render_video
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 IMAGENS_DIR = PROJECT_ROOT / "imagens"
 AUDIO_DIR = PROJECT_ROOT / "audio"
 BGM_DIR = PROJECT_ROOT / "background-music"
+VIDEO_DIR = PROJECT_ROOT / "video"
 AUDIO_EXTS = [".aac", ".m4a", ".mp3", ".wav", ".ogg", ".flac"]
 
 
 class RenderWorker(QThread):
     """Asynchronous background rendering thread."""
 
-    progress = Signal(int)
+    progress = Signal(int, str)
     finished = Signal(bool, str)
 
     def __init__(self, img: Path, narr: Path, bgm: Path | None, out: Path, n_vol: float, m_vol: float, preset: str):
@@ -32,18 +33,28 @@ class RenderWorker(QThread):
 
     def run(self):
         try:
-            self.progress.emit(20)
+            self.progress.emit(10, "Step 1/2: Mixing audio tracks & volume levels...")
             mixed = self.out.parent / "temp_mixed.wav"
             if not mix_audio_tracks(self.narr, self.bgm, mixed, narration_volume=self.n_vol, bgm_volume=self.m_vol):
                 self.finished.emit(False, "Audio mixing failed.")
                 return
-            self.progress.emit(60)
+
+            total_dur = get_audio_duration(mixed)
+            self.progress.emit(25, f"Step 2/2: Encoding NVENC Video (0.0s / {total_dur:.1f}s)...")
+
+            def on_video_progress(pct_val: float, sec_val: float):
+                scaled_pct = 25 + int(pct_val * 0.70)
+                msg = f"Step 2/2: Encoding NVENC Video ({sec_val:.1f}s / {total_dur:.1f}s)..."
+                self.progress.emit(scaled_pct, msg)
+
             w, h = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
-            ok = render_video(self.img, mixed, None, self.out, width=w, height=h)
+            ok = render_video(self.img, mixed, None, self.out, width=w, height=h, progress_callback=on_video_progress, total_duration=total_dur)
+
             if mixed.exists():
                 mixed.unlink()
-            self.progress.emit(100)
-            self.finished.emit(ok, f"Video rendered at {self.out}" if ok else "NVENC GPU rendering failed.")
+
+            self.progress.emit(100, "Rendering complete!")
+            self.finished.emit(ok, f"Video rendered successfully at {self.out}" if ok else "NVENC GPU rendering failed.")
         except Exception as err:
             self.finished.emit(False, str(err))
 
@@ -56,7 +67,7 @@ class VideoGeneratorApp(QMainWindow):
         self.setWindowTitle("YouTube Video Automation Studio")
         self.setObjectName("ChatGPTVideoStudio")
         self.resize(650, 500)
-        for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR):
+        for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR, VIDEO_DIR):
             d.mkdir(exist_ok=True)
         self.init_ui()
         self.auto_prefill_media()
@@ -127,25 +138,30 @@ class VideoGeneratorApp(QMainWindow):
         self.narr_input.setText(first_match(AUDIO_DIR, AUDIO_EXTS))
         self.bgm_input.setText(first_match(BGM_DIR, AUDIO_EXTS))
 
+    def update_progress(self, val: int, msg: str):
+        self.progress_bar.setValue(val)
+        self.status_label.setText(msg)
+
     def start_rendering(self):
         img = Path(self.img_input.text())
         narr = Path(self.narr_input.text())
         bgm = Path(self.bgm_input.text()) if self.bgm_input.text() else None
-        output, _ = QFileDialog.getSaveFileName(self, "Save Video", "output_video.mp4", "MP4 Video (*.mp4)")
+        default_out = str(VIDEO_DIR / "output_video.mp4")
+        output, _ = QFileDialog.getSaveFileName(self, "Save Video", default_out, "MP4 Video (*.mp4)")
 
         if not img.is_file() or not narr.is_file() or not output:
             self.status_label.setText("Error: Select valid Image and Narration Audio files.")
             return
 
         self.btn_render.setEnabled(False)
-        self.status_label.setText("Rendering video using NVENC GPU...")
+        self.update_progress(5, "Initializing NVENC GPU rendering pipeline...")
         self.worker = RenderWorker(
             img, narr, bgm, Path(output),
             self.narr_slider.value() / 100.0,
             self.music_slider.value() / 100.0,
             self.preset_combo.currentText(),
         )
-        self.worker.progress.connect(self.progress_bar.setValue)
+        self.worker.progress.connect(self.update_progress)
         self.worker.finished.connect(self.on_render_finished)
         self.worker.start()
 

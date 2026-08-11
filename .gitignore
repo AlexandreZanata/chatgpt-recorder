@@ -31,4 +31,10 @@ audio/*
 !audio/.gitkeep
 background-music/*
 !background-music/.gitkeep
+video/*
+!video/.gitkeep
+*.mp4
+*.wav
+
+
 
