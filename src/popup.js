@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Popup UI Logic (With History)
+// ChatGPT Audio Capture — Popup UI Logic (With History & Preview)
 
 function renderHistory(items) {
   const container = document.getElementById('historyList');
@@ -7,8 +7,8 @@ function renderHistory(items) {
     container.innerHTML = '<div class="history-item">No captures yet</div>';
     return;
   }
-  container.innerHTML = items.map((i) => `
-    <div class="history-item">
+  container.innerHTML = items.map((i, index) => `
+    <div class="history-item" data-index="${index}">
       <strong>${i.title || 'Untitled'}</strong><br/>
       <small>${i.filename}</small>
     </div>
