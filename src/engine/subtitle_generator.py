@@ -1,4 +1,4 @@
-"""Subtitle Generation and ASS Formatting Module."""
+"""Subtitle Generation and ASS Formatting Module with GPU-accelerated faster-whisper."""
 
 from pathlib import Path
 
@@ -58,3 +58,22 @@ def save_ass_subtitles(
     content = generate_ass_content(segments, font_name=font_name, font_size=font_size)
     output_path.write_text(content, encoding="utf-8")
     return output_path
+
+
+def transcribe_audio_to_ass(
+    audio_path: Path,
+    output_ass_path: Path,
+    font_name: str = "DejaVu Sans",
+    font_size: int = 24,
+    model_size: str = "tiny.en",
+) -> Path | None:
+    """Transcribe audio to ASS subtitles using GPU-accelerated faster-whisper."""
+    try:
+        from faster_whisper import WhisperModel
+        model = WhisperModel(model_size, device="cuda", compute_type="float16")
+        segments, _ = model.transcribe(str(audio_path), language="en", vad_filter=True)
+        seg_list = [{"start": s.start, "end": s.end, "text": s.text} for s in segments]
+        return save_ass_subtitles(seg_list, output_ass_path, font_name=font_name, font_size=font_size)
+    except Exception as err:
+        print(f"Subtitle transcription warning: {err}")
+        return None

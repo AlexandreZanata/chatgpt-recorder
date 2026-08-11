@@ -4,12 +4,13 @@ import sys
 from pathlib import Path
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
+    QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QProgressBar, QPushButton, QSlider,
     QVBoxLayout, QWidget,
 )
 
 from src.engine.audio_mixer import get_audio_duration
+from src.engine.subtitle_generator import transcribe_audio_to_ass
 from src.engine.video_composer import render_single_pass_video
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -26,26 +27,35 @@ class RenderWorker(QThread):
     progress = Signal(int, str)
     finished = Signal(bool, str)
 
-    def __init__(self, img: Path, narr: Path, bgm: Path | None, out: Path, n_vol: float, m_vol: float, preset: str):
+    def __init__(self, img: Path, narr: Path, bgm: Path | None, out: Path, n_vol: float, m_vol: float, preset: str, auto_sub: bool):
         super().__init__()
         self.img, self.narr, self.bgm, self.out = img, narr, bgm, out
-        self.n_vol, self.m_vol, self.preset = n_vol, m_vol, preset
+        self.n_vol, self.m_vol, self.preset, self.auto_sub = n_vol, m_vol, preset, auto_sub
 
     def run(self):
         try:
             total_dur = get_audio_duration(self.narr)
-            self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {total_dur:.1f}s)...")
+            sub_path = None
+            if self.auto_sub:
+                self.progress.emit(5, "Step 1/2: Transcribing Audio via Whisper GPU AI...")
+                temp_ass = self.out.parent / "temp_subtitles.ass"
+                sub_path = transcribe_audio_to_ass(self.narr, temp_ass)
+
+            self.progress.emit(25, f"Step 2/2: NVENC GPU Video Encoding (0.0s / {total_dur:.1f}s)...")
 
             def on_progress(pct_val: float, sec_val: float):
-                msg = f"Single-Pass GPU Encoding ({sec_val:.1f}s / {total_dur:.1f}s)..."
-                self.progress.emit(int(pct_val), msg)
+                scaled = 25 + int(pct_val * 0.74)
+                self.progress.emit(scaled, f"Step 2/2: NVENC GPU Video Encoding ({sec_val:.1f}s / {total_dur:.1f}s)...")
 
             w, h = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
             ok = render_single_pass_video(
-                self.img, self.narr, self.bgm, None, self.out,
+                self.img, self.narr, self.bgm, sub_path, self.out,
                 narr_vol=self.n_vol, bgm_vol=self.m_vol, width=w, height=h,
                 progress_callback=on_progress, total_duration=total_dur
             )
+
+            if sub_path and sub_path.exists():
+                sub_path.unlink()
 
             self.progress.emit(100, "Rendering complete!")
             self.finished.emit(ok, f"Video rendered at {self.out}" if ok else "GPU rendering failed.")
@@ -60,7 +70,7 @@ class VideoGeneratorApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
         self.setObjectName("ChatGPTVideoStudio")
-        self.resize(650, 500)
+        self.resize(650, 520)
         for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR, VIDEO_DIR):
             d.mkdir(exist_ok=True)
         self.init_ui()
@@ -79,6 +89,10 @@ class VideoGeneratorApp(QMainWindow):
 
         self.narr_slider = self.create_slider_row(form, "Narration Volume:", 0, 200, 100)
         self.music_slider = self.create_slider_row(form, "Music Volume:", 0, 50, 18)
+
+        self.sub_checkbox = QCheckBox("Auto-Generate Subtitles (Whisper GPU AI)")
+        self.sub_checkbox.setChecked(True)
+        form.addRow("Subtitles:", self.sub_checkbox)
 
         self.preset_combo = QComboBox()
         self.preset_combo.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
@@ -148,12 +162,13 @@ class VideoGeneratorApp(QMainWindow):
             return
 
         self.btn_render.setEnabled(False)
-        self.update_progress(5, "Initializing single-pass NVENC GPU pipeline...")
+        self.update_progress(5, "Initializing Whisper GPU AI & NVENC pipeline...")
         self.worker = RenderWorker(
             img, narr, bgm, Path(output),
             self.narr_slider.value() / 100.0,
             self.music_slider.value() / 100.0,
             self.preset_combo.currentText(),
+            self.sub_checkbox.isChecked(),
         )
         self.worker.progress.connect(self.update_progress)
         self.worker.finished.connect(self.on_render_finished)
