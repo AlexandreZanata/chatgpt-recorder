@@ -1,4 +1,4 @@
-"""FFmpeg Single-Pass NVENC GPU Video Composer module."""
+"""FFmpeg Single-Pass Max-Hardware GPU Video Composer module."""
 
 import subprocess
 from pathlib import Path
@@ -29,20 +29,20 @@ def build_single_pass_command(
     bgm_vol: float = 0.18,
     width: int = 1920,
     height: int = 1080,
-    fps: int = 5,
+    fps: int = 2,
     duration: float = 0.0,
 ) -> list[str]:
-    """Construct ultra-fast single-pass FFmpeg NVENC command with explicit duration cutoff."""
+    """Construct max-hardware multi-threaded single-pass FFmpeg NVENC command."""
     vf = f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
-    if subtitle_path and subtitle_path.is_file():
-        sub_esc = str(subtitle_path.resolve()).replace(":", "\\:")
-        vf += f",subtitles='{sub_esc}'"
 
-    cmd = ["ffmpeg", "-y", "-thread_queue_size", "4096", "-loop", "1", "-i", str(image_path)]
-    cmd.extend(["-thread_queue_size", "4096", "-i", str(narr_path)])
+    cmd = [
+        "ffmpeg", "-y", "-threads", "0", "-filter_threads", "0", "-filter_complex_threads", "0",
+        "-thread_queue_size", "16384", "-loop", "1", "-i", str(image_path),
+        "-thread_queue_size", "16384", "-i", str(narr_path)
+    ]
 
     if bgm_path and bgm_path.is_file():
-        cmd.extend(["-thread_queue_size", "4096", "-stream_loop", "-1", "-i", str(bgm_path)])
+        cmd.extend(["-thread_queue_size", "16384", "-stream_loop", "-1", "-i", str(bgm_path)])
         af = f"[1:a]volume={narr_vol}[narr];[2:a]volume={bgm_vol}[bgm];[narr][bgm]amix=inputs=2:duration=first[aout]"
         filter_complex = f"[0:v]{vf}[vout];{af}"
         cmd.extend(["-filter_complex", filter_complex, "-map", "[vout]", "-map", "[aout]"])
@@ -54,8 +54,8 @@ def build_single_pass_command(
         cmd.extend(["-t", f"{duration:.3f}"])
 
     cmd.extend([
-        "-c:v", "h264_nvenc", "-preset", "p1", "-tune", "ll", "-rc", "constqp", "-qp", "23",
-        "-g", "600", "-bf", "0", "-no-scenecut", "1", "-r", str(fps),
+        "-c:v", "h264_nvenc", "-preset", "p1", "-tune", "ll", "-rc", "constqp", "-qp", "24",
+        "-g", "9999", "-bf", "0", "-no-scenecut", "1", "-r", str(fps),
         "-c:a", "aac", "-b:a", "128k", str(output_path)
     ])
     return cmd
@@ -71,11 +71,11 @@ def render_single_pass_video(
     bgm_vol: float = 0.18,
     width: int = 1920,
     height: int = 1080,
-    fps: int = 5,
+    fps: int = 2,
     progress_callback=None,
     total_duration: float = 0.0,
 ) -> bool:
-    """Execute single-pass GPU video render with streaming progress and explicit duration limit."""
+    """Execute single-pass max-hardware GPU video render."""
     cmd = build_single_pass_command(
         image_path, narr_path, bgm_path, subtitle_path, output_path,
         narr_vol, bgm_vol, width, height, fps, duration=total_duration
