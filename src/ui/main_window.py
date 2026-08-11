@@ -22,6 +22,10 @@ from PySide6.QtWidgets import (
 from src.engine.audio_mixer import mix_audio_tracks
 from src.engine.video_composer import render_video
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+IMAGENS_DIR = PROJECT_ROOT / "imagens"
+AUDIO_DIR = PROJECT_ROOT / "audio"
+
 
 class RenderWorker(QThread):
     """Asynchronous background rendering thread."""
@@ -82,7 +86,10 @@ class VideoGeneratorApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
         self.resize(650, 480)
+        IMAGENS_DIR.mkdir(exist_ok=True)
+        AUDIO_DIR.mkdir(exist_ok=True)
         self.init_ui()
+        self.auto_prefill_media()
 
     def init_ui(self):
         central = QWidget()
@@ -90,9 +97,9 @@ class VideoGeneratorApp(QMainWindow):
         layout = QVBoxLayout(central)
 
         form = QFormLayout()
-        self.img_input = self.create_file_row(form, "Background Image:", "Select Image (*.png *.jpg *.webp)")
-        self.narr_input = self.create_file_row(form, "Narration Audio:", "Select Audio (*.mp3 *.wav)")
-        self.bgm_input = self.create_file_row(form, "Background Music:", "Select Music (*.mp3 *.wav)")
+        self.img_input = self.create_file_row(form, "Background Image:", "Select Image (*.png *.jpg *.webp)", IMAGENS_DIR)
+        self.narr_input = self.create_file_row(form, "Narration Audio:", "Select Audio (*.mp3 *.wav)", AUDIO_DIR)
+        self.bgm_input = self.create_file_row(form, "Background Music:", "Select Music (*.mp3 *.wav)", AUDIO_DIR)
 
         self.music_slider = QSlider(Qt.Horizontal)
         self.music_slider.setRange(0, 50)
@@ -123,20 +130,30 @@ class VideoGeneratorApp(QMainWindow):
         self.btn_render.clicked.connect(self.start_rendering)
         layout.addWidget(self.btn_render)
 
-    def create_file_row(self, form, label, filter_str):
+    def create_file_row(self, form, label, filter_str, default_dir):
         line = QLineEdit()
         btn = QPushButton("Browse...")
-        btn.clicked.connect(lambda: self.browse_file(line, filter_str))
+        btn.clicked.connect(lambda: self.browse_file(line, filter_str, default_dir))
         box = QHBoxLayout()
         box.addWidget(line)
         box.addWidget(btn)
         form.addRow(label, box)
         return line
 
-    def browse_file(self, line_edit, filter_str):
-        path, _ = QFileDialog.getOpenFileName(self, "Select File", "", filter_str)
+    def browse_file(self, line_edit, filter_str, default_dir):
+        start_path = str(default_dir) if default_dir.is_dir() else ""
+        path, _ = QFileDialog.getOpenFileName(self, "Select File", start_path, filter_str)
         if path:
             line_edit.setText(path)
+
+    def auto_prefill_media(self):
+        imgs = [p for p in IMAGENS_DIR.glob("*") if p.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp"]]
+        if imgs:
+            self.img_input.setText(str(imgs[0]))
+
+        audios = [p for p in AUDIO_DIR.glob("*") if p.suffix.lower() in [".mp3", ".wav", ".m4a"]]
+        if audios:
+            self.narr_input.setText(str(audios[0]))
 
     def start_rendering(self):
         img = Path(self.img_input.text())
