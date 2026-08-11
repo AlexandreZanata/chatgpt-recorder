@@ -6,7 +6,8 @@
   "scripts": {
     "verify": "bash scripts/check-quality.sh",
     "lint": "eslint src/ --max-warnings 0",
-    "test": "bash scripts/run-tests.sh"
+    "test": "bash scripts/run-tests.sh",
+    "build": "bash scripts/package-extension.sh"
   },
   "devDependencies": {
     "eslint": "^9.0.0",

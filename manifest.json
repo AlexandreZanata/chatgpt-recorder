@@ -29,6 +29,15 @@
     "default_title": "ChatGPT Audio Capture",
     "default_popup": "popup.html"
   },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
+      },
+      "description": "Open ChatGPT Audio Capture Popup"
+    }
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "chatgpt-audio-capture@zaflas.local",
