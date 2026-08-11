@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Popup UI Logic (With Templates)
+// ChatGPT Audio Capture — Popup UI Logic (With Export)
 
 function renderHistory(items) {
   const container = document.getElementById('historyList');
@@ -30,14 +30,32 @@ function bindInputListener(id, eventType, key, isCheckbox) {
   });
 }
 
-function bindClearButton() {
-  const btn = document.getElementById('clearHistory');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    if (typeof browser !== 'undefined' && browser.storage) {
-      browser.storage.local.set({ captureHistory: [] }).then(() => renderHistory([]));
-    }
-  });
+function triggerExport(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  if (typeof browser !== 'undefined' && browser.downloads) {
+    browser.downloads.download({ url, filename, saveAs: true });
+  }
+}
+
+function bindButtons() {
+  const clearBtn = document.getElementById('clearHistory');
+  const exportBtn = document.getElementById('exportSettings');
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      if (typeof browser !== 'undefined' && browser.storage) {
+        browser.storage.local.set({ captureHistory: [] }).then(() => renderHistory([]));
+      }
+    });
+  }
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      if (typeof browser !== 'undefined' && browser.storage) {
+        browser.storage.local.get(null).then((s) => triggerExport(s, 'chatgpt-recorder-settings.json'));
+      }
+    });
+  }
 }
 
 function loadSettings() {
@@ -66,7 +84,7 @@ function bindEvents() {
   bindInputListener('prefix', 'input', 'filenamePrefix', false);
   bindInputListener('template', 'input', 'filenameTemplate', false);
   bindInputListener('subfolder', 'input', 'subfolder', false);
-  bindClearButton();
+  bindButtons();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -69,7 +69,7 @@
       margin-bottom: 6px;
     }
     .history-list {
-      max-height: 100px;
+      max-height: 90px;
       overflow-y: auto;
       font-size: 11px;
     }
@@ -78,6 +78,16 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       color: var(--muted);
       word-break: break-all;
+    }
+    .action-btn {
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: var(--text);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 8px;
     }
     .clear-btn {
       background: transparent;
@@ -122,6 +132,7 @@
       <label class="setting-label" for="subfolder">Subfolder (optional)</label>
       <input type="text" id="subfolder" placeholder="e.g. chatgpt-audio">
     </div>
+    <button class="action-btn" id="exportSettings">Export Settings (JSON)</button>
   </div>
 
   <div class="card">
