@@ -42,7 +42,7 @@ def build_single_pass_command(
 
     if bgm_path and bgm_path.is_file():
         cmd.extend(["-thread_queue_size", "1024", "-stream_loop", "-1", "-i", str(bgm_path)])
-        af = f"[1:a]volume={narr_vol}[narr];[2:a]volume={bgm_vol}[bgm];[narr][bgm]amix=inputs=2:duration=first[aout]"
+        af = f"[1:a]volume={narr_vol}[narr];[2:a]volume={bgm_vol}[bgm];[narr][bgm]amix=inputs=2:duration=first:normalize=0[aout]"
         filter_complex = f"[0:v]{vf}[vout];{af}"
         cmd.extend(["-filter_complex", filter_complex, "-map", "[vout]", "-map", "[aout]"])
     else:

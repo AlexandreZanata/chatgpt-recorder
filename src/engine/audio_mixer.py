@@ -32,7 +32,7 @@ def build_audio_mix_command(
         filter_complex = (
             f"[0:a]volume={narration_volume}[narr];"
             f"[1:a]volume={bgm_volume}[bgm];"
-            "[narr][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout]"
+            "[narr][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]"
         )
         cmd.extend(["-filter_complex", filter_complex, "-map", "[aout]"])
     else:
