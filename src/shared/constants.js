@@ -14,6 +14,16 @@ export const TTS_URL_PATTERNS = [
   '*://*.oaiusercontent.com/*'
 ];
 
+export const MIME_EXTENSION_MAP = {
+  'audio/mpeg': '.mp3',
+  'audio/mp3': '.mp3',
+  'audio/wav': '.wav',
+  'audio/x-wav': '.wav',
+  'audio/ogg': '.ogg',
+  'audio/aac': '.aac',
+  'audio/webm': '.webm'
+};
+
 export const STORAGE_KEYS = {
   AUTO_DOWNLOAD: 'autoDownload',
   FILENAME_PREFIX: 'filenamePrefix',

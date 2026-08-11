@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Background Service Script (With History)
+// ChatGPT Audio Capture — Background Service Script (MIME & Badge)
 
 const TTS_PATTERNS = [
   '*://chatgpt.com/backend-api/synthesize*',
@@ -7,12 +7,30 @@ const TTS_PATTERNS = [
   '*://*.oaiusercontent.com/*'
 ];
 
+const MIME_MAP = {
+  'audio/mpeg': '.mp3',
+  'audio/mp3': '.mp3',
+  'audio/wav': '.wav',
+  'audio/ogg': '.ogg',
+  'audio/aac': '.aac',
+  'audio/webm': '.webm'
+};
+
 const ICONS = {
   idle: 'icons/icon-idle.svg',
   recording: 'icons/icon-recording.svg',
   saved: 'icons/icon-saved.svg',
   error: 'icons/icon-error.svg'
 };
+
+let sessionCaptureCount = 0;
+
+function updateBadge() {
+  if (typeof browser !== 'undefined' && browser.action) {
+    browser.action.setBadgeText({ text: sessionCaptureCount > 0 ? String(sessionCaptureCount) : '' });
+    browser.action.setBadgeBackgroundColor({ color: '#6366f1' });
+  }
+}
 
 function updateIcon(state) {
   const iconPath = ICONS[state] || ICONS.idle;
@@ -21,11 +39,16 @@ function updateIcon(state) {
   }
 }
 
-function buildPath(subfolder, prefix, title) {
+function getExtensionForMime(mimeType) {
+  return MIME_MAP[mimeType] || '.mp3';
+}
+
+function buildPath(subfolder, prefix, title, mimeType) {
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
   const safePrefix = prefix || 'chatgpt-tts';
   const safeTitle = title || 'audio';
-  const name = `${safePrefix}_${ts}_${safeTitle}.mp3`;
+  const ext = getExtensionForMime(mimeType);
+  const name = `${safePrefix}_${ts}_${safeTitle}${ext}`;
   return subfolder ? `${subfolder.replace(/\/$/, '')}/${name}` : name;
 }
 
@@ -37,31 +60,30 @@ function saveHistory(item) {
   });
 }
 
-function triggerDownload(blob, title) {
+function triggerDownload(blob, title, mimeType) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
-  browser.storage.local.get({
-    autoDownload: true,
-    filenamePrefix: 'chatgpt-tts',
-    subfolder: ''
-  }).then((s) => {
-    if (!s.autoDownload) return;
-    updateIcon('saved');
-    const path = buildPath(s.subfolder, s.filenamePrefix, title);
-    const url = URL.createObjectURL(blob);
-    browser.downloads.download({ url, filename: path, saveAs: false });
-    saveHistory({ id: Date.now(), filename: path, title, timestamp: new Date().toISOString() });
-    setTimeout(() => updateIcon('idle'), 3000);
-  });
+  browser.storage.local.get({ autoDownload: true, filenamePrefix: 'chatgpt-tts', subfolder: '' })
+    .then((s) => {
+      if (!s.autoDownload) return;
+      sessionCaptureCount += 1;
+      updateBadge();
+      updateIcon('saved');
+      const path = buildPath(s.subfolder, s.filenamePrefix, title, mimeType);
+      const url = URL.createObjectURL(blob);
+      browser.downloads.download({ url, filename: path, saveAs: false });
+      saveHistory({ id: Date.now(), filename: path, title, timestamp: new Date().toISOString() });
+      setTimeout(() => updateIcon('idle'), 3000);
+    });
 }
 
-function processCapturedAudio(blob, tabId) {
+function processCapturedAudio(blob, tabId, mimeType) {
   if (typeof browser === 'undefined' || !browser.tabs || !tabId) {
-    triggerDownload(blob, 'chatgpt-session');
+    triggerDownload(blob, 'chatgpt-session', mimeType);
     return;
   }
   browser.tabs.sendMessage(tabId, { type: 'EXTRACT_TITLE' })
-    .then((r) => triggerDownload(blob, r && r.title ? r.title : 'chatgpt-session'))
-    .catch(() => triggerDownload(blob, 'chatgpt-session'));
+    .then((r) => triggerDownload(blob, r && r.title ? r.title : 'chatgpt-session', mimeType))
+    .catch(() => triggerDownload(blob, 'chatgpt-session', mimeType));
 }
 
 function setupStreamFilter(details) {
@@ -77,8 +99,9 @@ function setupStreamFilter(details) {
 
   filter.onstop = () => {
     filter.disconnect();
-    const blob = new Blob(chunks, { type: 'audio/mpeg' });
-    processCapturedAudio(blob, details.tabId);
+    const mimeType = 'audio/mpeg';
+    const blob = new Blob(chunks, { type: mimeType });
+    processCapturedAudio(blob, details.tabId, mimeType);
   };
 
   filter.onerror = () => {

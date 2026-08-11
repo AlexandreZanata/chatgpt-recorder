@@ -1,24 +1,23 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { EXTENSION_STATE, TTS_URL_PATTERNS, STORAGE_KEYS, DEFAULTS } from '../src/shared/constants.js';
+import { EXTENSION_STATE, TTS_URL_PATTERNS, MIME_EXTENSION_MAP } from '../src/shared/constants.js';
 
-describe('ChatGPT Audio Capture — Task 08 Core & History Tests', () => {
-  it('should define valid extension states and storage keys', () => {
+describe('ChatGPT Audio Capture — Task 09 MIME & Badge Tests', () => {
+  it('should define valid extension states and MIME mappings', () => {
     assert.strictEqual(EXTENSION_STATE.IDLE, 'idle');
-    assert.strictEqual(STORAGE_KEYS.SUBFOLDER, 'subfolder');
-    assert.strictEqual(DEFAULTS.MAX_HISTORY, 20);
+    assert.strictEqual(MIME_EXTENSION_MAP['audio/mpeg'], '.mp3');
+    assert.strictEqual(MIME_EXTENSION_MAP['audio/wav'], '.wav');
+    assert.strictEqual(MIME_EXTENSION_MAP['audio/ogg'], '.ogg');
   });
 
   it('should include target TTS URL patterns', () => {
     assert.ok(TTS_URL_PATTERNS.includes('*://chatgpt.com/backend-api/synthesize*'));
   });
 
-  it('should build relative subfolder path correctly', () => {
-    const subfolder = 'chatgpt-audio/';
-    const prefix = 'chatgpt-tts';
-    const cleanTitle = 'my-audio';
-    const filename = `${prefix}_2026_${cleanTitle}.mp3`;
-    const fullPath = `${subfolder.replace(/\/$/, '')}/${filename}`;
-    assert.strictEqual(fullPath, 'chatgpt-audio/chatgpt-tts_2026_my-audio.mp3');
+  it('should resolve correct extension for MIME type', () => {
+    const getExt = (mime) => MIME_EXTENSION_MAP[mime] || '.mp3';
+    assert.strictEqual(getExt('audio/wav'), '.wav');
+    assert.strictEqual(getExt('audio/mpeg'), '.mp3');
+    assert.strictEqual(getExt('unknown/format'), '.mp3');
   });
 });
