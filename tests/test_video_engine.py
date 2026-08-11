@@ -27,7 +27,7 @@ class TestVideoEngine(unittest.TestCase):
         cmd = build_ffmpeg_composer_command(img, audio, None, out, width=1920, height=1080)
         self.assertIn("h264_nvenc", cmd)
         self.assertIn("-preset", cmd)
-        self.assertIn("p7", cmd)
+        self.assertIn("p1", cmd)
 
     def test_ass_subtitle_formatting(self):
         self.assertEqual(format_ass_time(0.0), "0:00:00.00")
