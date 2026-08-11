@@ -29,3 +29,6 @@ imagens/*
 !imagens/.gitkeep
 audio/*
 !audio/.gitkeep
+background-music/*
+!background-music/.gitkeep
+

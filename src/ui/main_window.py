@@ -25,6 +25,7 @@ from src.engine.video_composer import render_video
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 IMAGENS_DIR = PROJECT_ROOT / "imagens"
 AUDIO_DIR = PROJECT_ROOT / "audio"
+BGM_DIR = PROJECT_ROOT / "background-music"
 
 
 class RenderWorker(QThread):
@@ -86,8 +87,8 @@ class VideoGeneratorApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
         self.resize(650, 480)
-        IMAGENS_DIR.mkdir(exist_ok=True)
-        AUDIO_DIR.mkdir(exist_ok=True)
+        for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR):
+            d.mkdir(exist_ok=True)
         self.init_ui()
         self.auto_prefill_media()
 
@@ -99,7 +100,7 @@ class VideoGeneratorApp(QMainWindow):
         form = QFormLayout()
         self.img_input = self.create_file_row(form, "Background Image:", "Select Image (*.png *.jpg *.webp)", IMAGENS_DIR)
         self.narr_input = self.create_file_row(form, "Narration Audio:", "Select Audio (*.mp3 *.wav)", AUDIO_DIR)
-        self.bgm_input = self.create_file_row(form, "Background Music:", "Select Music (*.mp3 *.wav)", AUDIO_DIR)
+        self.bgm_input = self.create_file_row(form, "Background Music:", "Select Music (*.mp3 *.wav)", BGM_DIR)
 
         self.music_slider = QSlider(Qt.Horizontal)
         self.music_slider.setRange(0, 50)
@@ -154,6 +155,10 @@ class VideoGeneratorApp(QMainWindow):
         audios = [p for p in AUDIO_DIR.glob("*") if p.suffix.lower() in [".mp3", ".wav", ".m4a"]]
         if audios:
             self.narr_input.setText(str(audios[0]))
+
+        bgms = [p for p in BGM_DIR.glob("*") if p.suffix.lower() in [".mp3", ".wav", ".m4a"]]
+        if bgms:
+            self.bgm_input.setText(str(bgms[0]))
 
     def start_rendering(self):
         img = Path(self.img_input.text())
