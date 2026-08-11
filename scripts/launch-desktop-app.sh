@@ -4,12 +4,15 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export PATH="/home/iiii/.pyenv/shims:/home/iiii/.pyenv/bin:$PATH"
+export PATH="/data/dev/python/shims:/home/iiii/.pyenv/shims:$PATH"
 export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
 
 cd "$ROOT"
-if command -v python3 >/dev/null 2>&1; then
-  exec python3 "$ROOT/app_desktop.py" "$@"
+
+if [ -f "/data/dev/python/shims/python3" ]; then
+  exec /data/dev/python/shims/python3 "$ROOT/app_desktop.py" "$@"
+elif [ -f "/home/iiii/.pyenv/shims/python3" ]; then
+  exec /home/iiii/.pyenv/shims/python3 "$ROOT/app_desktop.py" "$@"
 else
-  exec /home/iiii/.pyenv/versions/3.12.2/bin/python3 "$ROOT/app_desktop.py" "$@"
+  exec python3 "$ROOT/app_desktop.py" "$@"
 fi

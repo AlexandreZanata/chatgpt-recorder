@@ -186,7 +186,7 @@ class VideoGeneratorApp(QMainWindow):
 def run_app():
     app = QApplication(sys.argv)
     app.setApplicationName("ChatGPTVideoStudio")
-    app.setDesktopFileName("chatgpt-video-studio.desktop")
+    app.setDesktopFileName("chatgpt-video-studio")
     window = VideoGeneratorApp()
     window.show()
     sys.exit(app.exec())
