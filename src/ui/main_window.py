@@ -4,19 +4,9 @@ import sys
 from pathlib import Path
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QApplication,
-    QComboBox,
-    QFileDialog,
-    QFormLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMainWindow,
-    QProgressBar,
-    QPushButton,
-    QSlider,
-    QVBoxLayout,
-    QWidget,
+    QApplication, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
+    QLabel, QLineEdit, QMainWindow, QProgressBar, QPushButton, QSlider,
+    QVBoxLayout, QWidget,
 )
 
 from src.engine.audio_mixer import mix_audio_tracks
@@ -26,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 IMAGENS_DIR = PROJECT_ROOT / "imagens"
 AUDIO_DIR = PROJECT_ROOT / "audio"
 BGM_DIR = PROJECT_ROOT / "background-music"
+AUDIO_EXTS = [".aac", ".m4a", ".mp3", ".wav", ".ogg", ".flac"]
 
 
 class RenderWorker(QThread):
@@ -34,48 +25,25 @@ class RenderWorker(QThread):
     progress = Signal(int)
     finished = Signal(bool, str)
 
-    def __init__(
-        self,
-        image: Path,
-        narration: Path,
-        bgm: Path | None,
-        output: Path,
-        music_vol: float,
-        preset: str,
-    ):
+    def __init__(self, img: Path, narr: Path, bgm: Path | None, out: Path, n_vol: float, m_vol: float, preset: str):
         super().__init__()
-        self.image = image
-        self.narration = narration
-        self.bgm = bgm
-        self.output = output
-        self.music_vol = music_vol
-        self.preset = preset
+        self.img, self.narr, self.bgm, self.out = img, narr, bgm, out
+        self.n_vol, self.m_vol, self.preset = n_vol, m_vol, preset
 
     def run(self):
         try:
             self.progress.emit(20)
-            mixed_audio = self.output.parent / "temp_mixed.wav"
-            ok_mix = mix_audio_tracks(
-                self.narration, self.bgm, mixed_audio, bgm_volume=self.music_vol
-            )
-            if not ok_mix:
+            mixed = self.out.parent / "temp_mixed.wav"
+            if not mix_audio_tracks(self.narr, self.bgm, mixed, narration_volume=self.n_vol, bgm_volume=self.m_vol):
                 self.finished.emit(False, "Audio mixing failed.")
                 return
-
             self.progress.emit(60)
-            width, height = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
-            ok_render = render_video(
-                self.image, mixed_audio, None, self.output, width=width, height=height
-            )
-
-            if mixed_audio.exists():
-                mixed_audio.unlink()
-
+            w, h = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
+            ok = render_video(self.img, mixed, None, self.out, width=w, height=h)
+            if mixed.exists():
+                mixed.unlink()
             self.progress.emit(100)
-            if ok_render:
-                self.finished.emit(True, f"Video rendered successfully at {self.output}")
-            else:
-                self.finished.emit(False, "FFmpeg NVENC video rendering failed.")
+            self.finished.emit(ok, f"Video rendered at {self.out}" if ok else "NVENC GPU rendering failed.")
         except Exception as err:
             self.finished.emit(False, str(err))
 
@@ -87,7 +55,7 @@ class VideoGeneratorApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
         self.setObjectName("ChatGPTVideoStudio")
-        self.resize(650, 480)
+        self.resize(650, 500)
         for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR):
             d.mkdir(exist_ok=True)
         self.init_ui()
@@ -97,33 +65,23 @@ class VideoGeneratorApp(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
-
         form = QFormLayout()
-        self.img_input = self.create_file_row(form, "Background Image:", "Select Image (*.png *.jpg *.webp)", IMAGENS_DIR)
-        self.narr_input = self.create_file_row(form, "Narration Audio:", "Select Audio (*.mp3 *.wav)", AUDIO_DIR)
-        self.bgm_input = self.create_file_row(form, "Background Music:", "Select Music (*.mp3 *.wav)", BGM_DIR)
 
-        self.music_slider = QSlider(Qt.Horizontal)
-        self.music_slider.setRange(0, 50)
-        self.music_slider.setValue(18)
-        self.music_val_lbl = QLabel("18%")
-        self.music_slider.valueChanged.connect(lambda v: self.music_val_lbl.setText(f"{v}%"))
+        filter_a = "Audio (*.aac *.m4a *.mp3 *.wav *.ogg *.flac)"
+        self.img_input = self.create_file_row(form, "Background Image:", "Image (*.png *.jpg *.webp)", IMAGENS_DIR)
+        self.narr_input = self.create_file_row(form, "Narration Audio:", filter_a, AUDIO_DIR)
+        self.bgm_input = self.create_file_row(form, "Background Music:", filter_a, BGM_DIR)
 
-        slider_box = QHBoxLayout()
-        slider_box.addWidget(self.music_slider)
-        slider_box.addWidget(self.music_val_lbl)
-        form.addRow("Music Volume:", slider_box)
+        self.narr_slider = self.create_slider_row(form, "Narration Volume:", 0, 200, 100)
+        self.music_slider = self.create_slider_row(form, "Music Volume:", 0, 50, 18)
 
         self.preset_combo = QComboBox()
         self.preset_combo.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
         form.addRow("Video Preset:", self.preset_combo)
 
         layout.addLayout(form)
-
         self.progress_bar = QProgressBar()
-        self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
-
         self.status_label = QLabel("Status: Ready")
         layout.addWidget(self.status_label)
 
@@ -142,24 +100,32 @@ class VideoGeneratorApp(QMainWindow):
         form.addRow(label, box)
         return line
 
+    def create_slider_row(self, form, label, min_v, max_v, default_v):
+        slider = QSlider(Qt.Horizontal)
+        slider.setRange(min_v, max_v)
+        slider.setValue(default_v)
+        lbl = QLabel(f"{default_v}%")
+        slider.valueChanged.connect(lambda v: lbl.setText(f"{v}%"))
+        box = QHBoxLayout()
+        box.addWidget(slider)
+        box.addWidget(lbl)
+        form.addRow(label, box)
+        return slider
+
     def browse_file(self, line_edit, filter_str, default_dir):
-        start_path = str(default_dir) if default_dir.is_dir() else ""
-        path, _ = QFileDialog.getOpenFileName(self, "Select File", start_path, filter_str)
+        start = str(default_dir) if default_dir.is_dir() else ""
+        path, _ = QFileDialog.getOpenFileName(self, "Select File", start, filter_str)
         if path:
             line_edit.setText(path)
 
     def auto_prefill_media(self):
-        imgs = [p for p in IMAGENS_DIR.glob("*") if p.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp"]]
-        if imgs:
-            self.img_input.setText(str(imgs[0]))
+        def first_match(dir_path, exts):
+            m = [p for p in dir_path.glob("*") if p.suffix.lower() in exts]
+            return str(m[0]) if m else ""
 
-        audios = [p for p in AUDIO_DIR.glob("*") if p.suffix.lower() in [".mp3", ".wav", ".m4a"]]
-        if audios:
-            self.narr_input.setText(str(audios[0]))
-
-        bgms = [p for p in BGM_DIR.glob("*") if p.suffix.lower() in [".mp3", ".wav", ".m4a"]]
-        if bgms:
-            self.bgm_input.setText(str(bgms[0]))
+        self.img_input.setText(first_match(IMAGENS_DIR, [".png", ".jpg", ".jpeg", ".webp"]))
+        self.narr_input.setText(first_match(AUDIO_DIR, AUDIO_EXTS))
+        self.bgm_input.setText(first_match(BGM_DIR, AUDIO_EXTS))
 
     def start_rendering(self):
         img = Path(self.img_input.text())
@@ -168,12 +134,17 @@ class VideoGeneratorApp(QMainWindow):
         output, _ = QFileDialog.getSaveFileName(self, "Save Video", "output_video.mp4", "MP4 Video (*.mp4)")
 
         if not img.is_file() or not narr.is_file() or not output:
-            self.status_label.setText("Error: Please select valid Image and Narration Audio files.")
+            self.status_label.setText("Error: Select valid Image and Narration Audio files.")
             return
 
         self.btn_render.setEnabled(False)
         self.status_label.setText("Rendering video using NVENC GPU...")
-        self.worker = RenderWorker(img, narr, bgm, Path(output), self.music_slider.value() / 100.0, self.preset_combo.currentText())
+        self.worker = RenderWorker(
+            img, narr, bgm, Path(output),
+            self.narr_slider.value() / 100.0,
+            self.music_slider.value() / 100.0,
+            self.preset_combo.currentText(),
+        )
         self.worker.progress.connect(self.progress_bar.setValue)
         self.worker.finished.connect(self.on_render_finished)
         self.worker.start()
