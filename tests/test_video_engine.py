@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.engine.audio_mixer import build_audio_mix_command
 from src.engine.subtitle_generator import format_ass_time, generate_ass_content
-from src.engine.video_composer import build_ffmpeg_composer_command
+from src.engine.video_composer import build_single_pass_command
 
 
 class TestVideoEngine(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestVideoEngine(unittest.TestCase):
         img = Path("/tmp/img.png")
         audio = Path("/tmp/audio.wav")
         out = Path("/tmp/out.mp4")
-        cmd = build_ffmpeg_composer_command(img, audio, None, out, width=1920, height=1080)
+        cmd = build_single_pass_command(img, audio, None, None, out, width=1920, height=1080)
         self.assertIn("h264_nvenc", cmd)
         self.assertIn("-preset", cmd)
         self.assertIn("p1", cmd)

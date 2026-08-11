@@ -9,8 +9,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from src.engine.audio_mixer import get_audio_duration, mix_audio_tracks
-from src.engine.video_composer import render_video
+from src.engine.audio_mixer import get_audio_duration
+from src.engine.video_composer import render_single_pass_video
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 IMAGENS_DIR = PROJECT_ROOT / "imagens"
@@ -33,28 +33,22 @@ class RenderWorker(QThread):
 
     def run(self):
         try:
-            self.progress.emit(10, "Step 1/2: Mixing audio tracks & volume levels...")
-            mixed = self.out.parent / "temp_mixed.wav"
-            if not mix_audio_tracks(self.narr, self.bgm, mixed, narration_volume=self.n_vol, bgm_volume=self.m_vol):
-                self.finished.emit(False, "Audio mixing failed.")
-                return
+            total_dur = get_audio_duration(self.narr)
+            self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {total_dur:.1f}s)...")
 
-            total_dur = get_audio_duration(mixed)
-            self.progress.emit(25, f"Step 2/2: Encoding NVENC Video (0.0s / {total_dur:.1f}s)...")
-
-            def on_video_progress(pct_val: float, sec_val: float):
-                scaled_pct = 25 + int(pct_val * 0.70)
-                msg = f"Step 2/2: Encoding NVENC Video ({sec_val:.1f}s / {total_dur:.1f}s)..."
-                self.progress.emit(scaled_pct, msg)
+            def on_progress(pct_val: float, sec_val: float):
+                msg = f"Single-Pass GPU Encoding ({sec_val:.1f}s / {total_dur:.1f}s)..."
+                self.progress.emit(int(pct_val), msg)
 
             w, h = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
-            ok = render_video(self.img, mixed, None, self.out, width=w, height=h, progress_callback=on_video_progress, total_duration=total_dur)
-
-            if mixed.exists():
-                mixed.unlink()
+            ok = render_single_pass_video(
+                self.img, self.narr, self.bgm, None, self.out,
+                narr_vol=self.n_vol, bgm_vol=self.m_vol, width=w, height=h,
+                progress_callback=on_progress, total_duration=total_dur
+            )
 
             self.progress.emit(100, "Rendering complete!")
-            self.finished.emit(ok, f"Video rendered successfully at {self.out}" if ok else "NVENC GPU rendering failed.")
+            self.finished.emit(ok, f"Video rendered at {self.out}" if ok else "GPU rendering failed.")
         except Exception as err:
             self.finished.emit(False, str(err))
 
@@ -154,7 +148,7 @@ class VideoGeneratorApp(QMainWindow):
             return
 
         self.btn_render.setEnabled(False)
-        self.update_progress(5, "Initializing NVENC GPU rendering pipeline...")
+        self.update_progress(5, "Initializing single-pass NVENC GPU pipeline...")
         self.worker = RenderWorker(
             img, narr, bgm, Path(output),
             self.narr_slider.value() / 100.0,

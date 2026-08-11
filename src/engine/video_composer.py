@@ -1,4 +1,4 @@
-"""FFmpeg NVENC GPU Video Composer module."""
+"""FFmpeg Single-Pass NVENC GPU Video Composer module."""
 
 import subprocess
 from pathlib import Path
@@ -19,58 +19,62 @@ def parse_out_time_sec(line: str) -> float:
     return -1.0
 
 
-def build_ffmpeg_composer_command(
+def build_single_pass_command(
     image_path: Path,
-    audio_path: Path,
+    narr_path: Path,
+    bgm_path: Path | None,
     subtitle_path: Path | None,
-    output_video_path: Path,
+    output_path: Path,
+    narr_vol: float = 1.0,
+    bgm_vol: float = 0.18,
     width: int = 1920,
     height: int = 1080,
-    fps: int = 30,
+    fps: int = 24,
 ) -> list[str]:
-    """Construct FFmpeg NVENC command for composing video from static image + audio + subtitles."""
-    video_filter = f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2"
+    """Construct ultra-fast single-pass FFmpeg NVENC command without temp files."""
+    vf = f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
     if subtitle_path and subtitle_path.is_file():
-        escaped_sub = str(subtitle_path.resolve()).replace(":", "\\:")
-        video_filter += f",subtitles='{escaped_sub}'"
+        sub_esc = str(subtitle_path.resolve()).replace(":", "\\:")
+        vf += f",subtitles='{sub_esc}'"
 
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-loop", "1",
-        "-i", str(image_path),
-        "-i", str(audio_path),
-        "-vf", video_filter,
-        "-c:v", "h264_nvenc",
-        "-preset", "p1",
-        "-tune", "hq",
-        "-rc", "constqp",
-        "-qp", "21",
-        "-g", "300",
-        "-no-scenecut", "1",
-        "-r", str(fps),
-        "-c:a", "aac",
-        "-b:a", "128k",
-        "-shortest",
-        str(output_video_path),
-    ]
+    cmd = ["ffmpeg", "-y", "-thread_queue_size", "4096", "-loop", "1", "-i", str(image_path)]
+    cmd.extend(["-thread_queue_size", "4096", "-i", str(narr_path)])
+
+    if bgm_path and bgm_path.is_file():
+        cmd.extend(["-thread_queue_size", "4096", "-stream_loop", "-1", "-i", str(bgm_path)])
+        af = f"[1:a]volume={narr_vol}[narr];[2:a]volume={bgm_vol}[bgm];[narr][bgm]amix=inputs=2:duration=first[aout]"
+        filter_complex = f"[0:v]{vf}[vout];{af}"
+        cmd.extend(["-filter_complex", filter_complex, "-map", "[vout]", "-map", "[aout]"])
+    else:
+        filter_complex = f"[0:v]{vf}[vout]"
+        cmd.extend(["-filter_complex", filter_complex, "-map", "[vout]", "-map", "1:a", "-af", f"volume={narr_vol}"])
+
+    cmd.extend([
+        "-c:v", "h264_nvenc", "-preset", "p1", "-tune", "ll", "-rc", "constqp", "-qp", "23",
+        "-g", "600", "-bf", "0", "-no-scenecut", "1", "-r", str(fps),
+        "-c:a", "aac", "-b:a", "128k", "-shortest", str(output_path)
+    ])
     return cmd
 
 
-def render_video(
+def render_single_pass_video(
     image_path: Path,
-    audio_path: Path,
+    narr_path: Path,
+    bgm_path: Path | None,
     subtitle_path: Path | None,
-    output_video_path: Path,
+    output_path: Path,
+    narr_vol: float = 1.0,
+    bgm_vol: float = 0.18,
     width: int = 1920,
     height: int = 1080,
-    fps: int = 30,
+    fps: int = 24,
     progress_callback=None,
     total_duration: float = 0.0,
 ) -> bool:
-    """Execute FFmpeg GPU video render with real-time progress parsing."""
-    cmd = build_ffmpeg_composer_command(
-        image_path, audio_path, subtitle_path, output_video_path, width, height, fps
+    """Execute single-pass GPU video render with streaming progress."""
+    cmd = build_single_pass_command(
+        image_path, narr_path, bgm_path, subtitle_path, output_path,
+        narr_vol, bgm_vol, width, height, fps
     )
     if progress_callback:
         cmd.extend(["-progress", "pipe:1", "-nostats"])
@@ -78,8 +82,7 @@ def render_video(
         for line in proc.stdout:
             sec = parse_out_time_sec(line.strip())
             if sec >= 0 and total_duration > 0:
-                pct = min(99.0, (sec / total_duration) * 100.0)
-                progress_callback(pct, sec)
+                progress_callback(min(99.0, (sec / total_duration) * 100.0), sec)
         proc.wait()
         return proc.returncode == 0
 
