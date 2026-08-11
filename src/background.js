@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Background Service Script (MIME & Badge)
+// ChatGPT Audio Capture — Background Service Script (With Templates)
 
 const TTS_PATTERNS = [
   '*://chatgpt.com/backend-api/synthesize*',
@@ -39,17 +39,22 @@ function updateIcon(state) {
   }
 }
 
-function getExtensionForMime(mimeType) {
-  return MIME_MAP[mimeType] || '.mp3';
+function formatFilename(tmpl, prefix, title, mimeType) {
+  const now = new Date();
+  const d = now.toISOString().split('T')[0];
+  const t = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+  const ext = MIME_MAP[mimeType] || '.mp3';
+  const pattern = tmpl || '{prefix}_{date}_{title}';
+  const name = pattern
+    .replace(/\{prefix\}/g, prefix || 'chatgpt-tts')
+    .replace(/\{date\}/g, d)
+    .replace(/\{time\}/g, t)
+    .replace(/\{title\}/g, title || 'audio');
+  return `${name}${ext}`;
 }
 
-function buildPath(subfolder, prefix, title, mimeType) {
-  const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const safePrefix = prefix || 'chatgpt-tts';
-  const safeTitle = title || 'audio';
-  const ext = getExtensionForMime(mimeType);
-  const name = `${safePrefix}_${ts}_${safeTitle}${ext}`;
-  return subfolder ? `${subfolder.replace(/\/$/, '')}/${name}` : name;
+function buildPath(subfolder, filename) {
+  return subfolder ? `${subfolder.replace(/\/$/, '')}/${filename}` : filename;
 }
 
 function saveHistory(item) {
@@ -62,18 +67,23 @@ function saveHistory(item) {
 
 function triggerDownload(blob, title, mimeType) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
-  browser.storage.local.get({ autoDownload: true, filenamePrefix: 'chatgpt-tts', subfolder: '' })
-    .then((s) => {
-      if (!s.autoDownload) return;
-      sessionCaptureCount += 1;
-      updateBadge();
-      updateIcon('saved');
-      const path = buildPath(s.subfolder, s.filenamePrefix, title, mimeType);
-      const url = URL.createObjectURL(blob);
-      browser.downloads.download({ url, filename: path, saveAs: false });
-      saveHistory({ id: Date.now(), filename: path, title, timestamp: new Date().toISOString() });
-      setTimeout(() => updateIcon('idle'), 3000);
-    });
+  browser.storage.local.get({
+    autoDownload: true,
+    filenamePrefix: 'chatgpt-tts',
+    filenameTemplate: '{prefix}_{date}_{title}',
+    subfolder: ''
+  }).then((s) => {
+    if (!s.autoDownload) return;
+    sessionCaptureCount += 1;
+    updateBadge();
+    updateIcon('saved');
+    const name = formatFilename(s.filenameTemplate, s.filenamePrefix, title, mimeType);
+    const path = buildPath(s.subfolder, name);
+    const url = URL.createObjectURL(blob);
+    browser.downloads.download({ url, filename: path, saveAs: false });
+    saveHistory({ id: Date.now(), filename: path, title, timestamp: new Date().toISOString() });
+    setTimeout(() => updateIcon('idle'), 3000);
+  });
 }
 
 function processCapturedAudio(blob, tabId, mimeType) {
