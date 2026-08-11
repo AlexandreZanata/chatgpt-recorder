@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Audio Capture",
+  "version": "0.1.0",
+  "description": "Captura automaticamente o áudio de Read Aloud do ChatGPT e salva localmente.",
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestFilterResponse",
+    "downloads",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://chatgpt.com/*",
+    "*://*.oaiusercontent.com/*"
+  ],
+  "background": {
+    "scripts": ["src/background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://chatgpt.com/*"],
+      "js": ["src/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_icon": "icons/icon-idle.svg",
+    "default_title": "ChatGPT Audio Capture"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "chatgpt-audio-capture@zaflas.local",
+      "strict_min_version": "115.0"
+    }
+  }
+}

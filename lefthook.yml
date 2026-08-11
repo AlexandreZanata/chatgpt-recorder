@@ -1,0 +1,29 @@
+# Lefthook — blocks every commit (local included) unless quality gates pass.
+# Caps: file ≤200 lines, function ≤80 lines, cyclomatic ≤10, lint 0/0, system 0 errors.
+#
+# Install: npm install && npx lefthook install
+# Manual:  npm run verify
+
+output:
+  - failure
+
+pre-commit:
+  parallel: false
+  commands:
+    quality:
+      run: bash scripts/check-quality.sh
+      skip:
+        - merge
+        - rebase
+
+# golden-update: must be checked here — pre-commit runs before git writes -m
+# into COMMIT_EDITMSG, so the guard would see a stale message.
+commit-msg:
+  commands:
+    golden-guard:
+      run: bash scripts/check-golden-guard.sh {1}
+
+pre-push:
+  commands:
+    quality:
+      run: bash scripts/check-quality.sh

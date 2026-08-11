@@ -1,0 +1,23 @@
+# Local workspace (never commit)
+.local/
+
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor files
+.DS_Store
+*.swp
+*.swo
+.vscode/
+!.vscode/extensions.json
+.idea/
+
+# Coverage / Build outputs
+dist/
+coverage/
+.coverage
+.pytest_cache/
+.ruff_cache/

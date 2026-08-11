@@ -1,0 +1,41 @@
+---
+description: Zero lint warnings; harness size caps; Lefthook blocks commits until green.
+alwaysApply: true
+---
+
+# Quality gates — professional-pdf-generator
+
+> Non-negotiable before every commit (Lefthook enforces locally).
+
+## Caps (Agent Harness)
+
+| Metric | Cap |
+|--------|-----|
+| File | ≤ **200** lines |
+| Function / method | ≤ **80** lines |
+| Cyclomatic complexity | ≤ **10** |
+| Lint | **0** errors, **0** warnings |
+| System / compile | **0** errors when tooling exists |
+
+## Commands
+
+```bash
+npm run verify
+npm run check:size
+npm run check:lint
+npm run check:system
+lefthook run pre-commit
+```
+
+## Agent MUST
+
+1. Run `npm run verify` after code changes before claiming done.
+2. Split files/functions before submitting — never defer.
+3. Use `.local/phases/*/TASKS.md` for step plans; never commit `.local/`.
+4. Cite official docs in `.local` phase `OFFICIAL-REFERENCE.md` files.
+
+## Agent NEVER
+
+- Commit with `--no-verify` unless the user explicitly requests it.
+- Disable lint rules to silence failures without user approval.
+- Leave files >200 lines or functions >80 lines without an explicit waiver.

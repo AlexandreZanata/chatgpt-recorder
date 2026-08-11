@@ -1,0 +1,30 @@
+---
+description: Universal hard caps — 80 lines/function, 200 lines/file, cyclomatic ≤10. Required verification.
+alwaysApply: true
+---
+
+# SIZE AND COMPLEXITY LIMITS (REQUIRED)
+
+> Always apply. Every project, every language. Full doc: `{rules_dir}/00-core/size-and-complexity-limits.md`
+
+## Hard caps — never exceed
+
+| Metric | Cap |
+|--------|-----|
+| Function / method | **80 lines** |
+| File / module | **200 lines** |
+| Cyclomatic complexity | **≤ 10 per function** |
+
+## Before marking work done
+
+1. Run typecheck + lint (or project equivalent).
+2. Verify every changed function and file against the table above.
+3. If over cap → split/extract in the same change — do not defer.
+
+## Agent NEVER
+
+- Ship functions > 80 lines or files > 200 lines without user waiver.
+- Skip verification when tooling is missing — count manually.
+- Nest deeper to save lines — extract functions instead.
+
+Refactor at complexity **8**; **10** is the absolute ceiling.

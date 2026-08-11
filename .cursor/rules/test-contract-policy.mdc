@@ -1,0 +1,38 @@
+---
+description: Contract-first tests — read before ANY test. Unit + integration + E2E automated. Tests never mirror code.
+alwaysApply: true
+---
+
+# TEST CONTRACT POLICY (READ BEFORE ANY TEST)
+
+> Full rule: `{rules_dir}/04-testing/contract-first-tests.md` — **read before writing, editing, or deleting any test.**
+
+## Law
+
+Tests are **immutable logical contracts**. They **fail** when code breaks the contract. **Never** change a test to match broken code.
+
+## Forbidden
+
+- Mirror production logic in the test
+- Weaken assertions to pass CI
+- Tests that cannot fail
+- Fix test expectations without contract/doc change
+
+## Pyramid (all automated in CI)
+
+| Type | ~Share | Purpose |
+|------|--------|---------|
+| **Unit** | 75% | Domain, VOs, state machines |
+| **Integration** | 20% | Use cases + adapters |
+| **E2E** | 5% | Critical user journeys |
+
+## Before any test
+
+1. Read `contract-first-tests.md`
+2. Read contract source (GIVEN/WHEN/THEN, `API-CONTRACT.md`, use case)
+3. Write failing test → implement → run automated suite
+4. If test vs code conflict → **fix code** (or formal contract change with user)
+
+```bash
+./harness/resolve-rules.sh test contract unit e2e
+```

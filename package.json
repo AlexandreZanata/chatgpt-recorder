@@ -1,0 +1,15 @@
+{
+  "name": "chatgpt-recorder",
+  "version": "0.1.0",
+  "description": "ChatGPT Audio Capture Firefox Extension (MV3)",
+  "type": "module",
+  "scripts": {
+    "verify": "bash scripts/check-quality.sh",
+    "lint": "eslint src/ --max-warnings 0",
+    "test": "bash scripts/run-tests.sh"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "lefthook": "^1.6.0"
+  }
+}
