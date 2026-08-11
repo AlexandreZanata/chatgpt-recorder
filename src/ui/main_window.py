@@ -86,6 +86,7 @@ class VideoGeneratorApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
+        self.setObjectName("ChatGPTVideoStudio")
         self.resize(650, 480)
         for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR):
             d.mkdir(exist_ok=True)
@@ -184,6 +185,8 @@ class VideoGeneratorApp(QMainWindow):
 
 def run_app():
     app = QApplication(sys.argv)
+    app.setApplicationName("ChatGPTVideoStudio")
+    app.setDesktopFileName("chatgpt-video-studio.desktop")
     window = VideoGeneratorApp()
     window.show()
     sys.exit(app.exec())
