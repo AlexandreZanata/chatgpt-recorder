@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Background Service (Strategy A)
+// ChatGPT Audio Capture — Background Service (Strategy A & Pipeline)
 
 const TTS_URL_PATTERNS = [
   '*://chatgpt.com/backend-api/synthesize*',
@@ -10,7 +10,8 @@ const TTS_URL_PATTERNS = [
 const ICONS = {
   idle: 'icons/icon-idle.svg',
   recording: 'icons/icon-recording.svg',
-  saved: 'icons/icon-saved.svg'
+  saved: 'icons/icon-saved.svg',
+  error: 'icons/icon-error.svg'
 };
 
 function updateIcon(state) {
@@ -20,23 +21,24 @@ function updateIcon(state) {
   }
 }
 
-function generateFilename(title) {
+function buildFilename(prefix, title) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const safePrefix = prefix || 'chatgpt-tts';
   const safeTitle = title || 'audio';
-  return `chatgpt-tts_${timestamp}_${safeTitle}.mp3`;
+  return `${safePrefix}_${timestamp}_${safeTitle}.mp3`;
 }
 
 function triggerDownload(blob, title) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
-  updateIcon('saved');
-  const filename = generateFilename(title);
-  const blobUrl = URL.createObjectURL(blob);
-  browser.downloads.download({
-    url: blobUrl,
-    filename: filename,
-    saveAs: false
-  });
-  setTimeout(() => updateIcon('idle'), 3000);
+  browser.storage.local.get({ autoDownload: true, filenamePrefix: 'chatgpt-tts' })
+    .then((settings) => {
+      if (!settings.autoDownload) return;
+      updateIcon('saved');
+      const filename = buildFilename(settings.filenamePrefix, title);
+      const blobUrl = URL.createObjectURL(blob);
+      browser.downloads.download({ url: blobUrl, filename: filename, saveAs: false });
+      setTimeout(() => updateIcon('idle'), 3000);
+    });
 }
 
 function processCapturedAudio(blob, tabId) {
@@ -45,13 +47,8 @@ function processCapturedAudio(blob, tabId) {
     return;
   }
   browser.tabs.sendMessage(tabId, { type: 'EXTRACT_TITLE' })
-    .then((response) => {
-      const title = response && response.title ? response.title : 'chatgpt-session';
-      triggerDownload(blob, title);
-    })
-    .catch(() => {
-      triggerDownload(blob, 'chatgpt-session');
-    });
+    .then((res) => triggerDownload(blob, res && res.title ? res.title : 'chatgpt-session'))
+    .catch(() => triggerDownload(blob, 'chatgpt-session'));
 }
 
 function setupStreamFilter(details) {
@@ -72,7 +69,8 @@ function setupStreamFilter(details) {
   };
 
   filter.onerror = () => {
-    updateIcon('idle');
+    updateIcon('error');
+    setTimeout(() => updateIcon('idle'), 3000);
   };
 }
 

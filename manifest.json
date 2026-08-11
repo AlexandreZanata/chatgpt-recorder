@@ -26,7 +26,8 @@
   ],
   "action": {
     "default_icon": "icons/icon-idle.svg",
-    "default_title": "ChatGPT Audio Capture"
+    "default_title": "ChatGPT Audio Capture",
+    "default_popup": "popup.html"
   },
   "browser_specific_settings": {
     "gecko": {

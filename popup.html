@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatGPT Audio Capture</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.8);
+      --accent: #6366f1;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    body {
+      width: 280px;
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 600;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 12px;
+    }
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .setting-label {
+      font-size: 13px;
+      color: var(--text);
+    }
+    input[type="text"] {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>ChatGPT Audio Capture</h1>
+  </div>
+  <div class="card">
+    <div class="setting-row">
+      <span class="setting-label">Auto Download</span>
+      <input type="checkbox" id="autoDownload" checked>
+    </div>
+    <div style="margin-top: 8px;">
+      <label class="setting-label" for="prefix">Filename Prefix</label>
+      <input type="text" id="prefix" value="chatgpt-tts">
+    </div>
+  </div>
+  <div class="status-badge">
+    <span class="dot"></span>
+    <span id="statusText">Status: Ready</span>
+  </div>
+  <script src="src/popup.js" type="module"></script>
+</body>
+</html>
