@@ -29,9 +29,10 @@ def build_single_pass_command(
     bgm_vol: float = 0.18,
     width: int = 1920,
     height: int = 1080,
-    fps: int = 24,
+    fps: int = 5,
+    duration: float = 0.0,
 ) -> list[str]:
-    """Construct ultra-fast single-pass FFmpeg NVENC command without temp files."""
+    """Construct ultra-fast single-pass FFmpeg NVENC command with explicit duration cutoff."""
     vf = f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
     if subtitle_path and subtitle_path.is_file():
         sub_esc = str(subtitle_path.resolve()).replace(":", "\\:")
@@ -49,10 +50,13 @@ def build_single_pass_command(
         filter_complex = f"[0:v]{vf}[vout]"
         cmd.extend(["-filter_complex", filter_complex, "-map", "[vout]", "-map", "1:a", "-af", f"volume={narr_vol}"])
 
+    if duration > 0:
+        cmd.extend(["-t", f"{duration:.3f}"])
+
     cmd.extend([
         "-c:v", "h264_nvenc", "-preset", "p1", "-tune", "ll", "-rc", "constqp", "-qp", "23",
         "-g", "600", "-bf", "0", "-no-scenecut", "1", "-r", str(fps),
-        "-c:a", "aac", "-b:a", "128k", "-shortest", str(output_path)
+        "-c:a", "aac", "-b:a", "128k", str(output_path)
     ])
     return cmd
 
@@ -67,14 +71,14 @@ def render_single_pass_video(
     bgm_vol: float = 0.18,
     width: int = 1920,
     height: int = 1080,
-    fps: int = 24,
+    fps: int = 5,
     progress_callback=None,
     total_duration: float = 0.0,
 ) -> bool:
-    """Execute single-pass GPU video render with streaming progress."""
+    """Execute single-pass GPU video render with streaming progress and explicit duration limit."""
     cmd = build_single_pass_command(
         image_path, narr_path, bgm_path, subtitle_path, output_path,
-        narr_vol, bgm_vol, width, height, fps
+        narr_vol, bgm_vol, width, height, fps, duration=total_duration
     )
     if progress_callback:
         cmd.extend(["-progress", "pipe:1", "-nostats"])
