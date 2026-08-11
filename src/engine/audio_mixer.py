@@ -21,8 +21,8 @@ def build_audio_mix_command(
     narration_path: Path,
     bgm_path: Path | None,
     output_audio_path: Path,
-    narration_volume: float = 1.0,
-    bgm_volume: float = 0.18,
+    narration_volume: float = 1.5,
+    bgm_volume: float = 0.15,
 ) -> list[str]:
     """Construct FFmpeg command to mix narration and looping background music."""
     cmd = ["ffmpeg", "-y", "-i", str(narration_path)]

@@ -77,8 +77,8 @@ class VideoGeneratorApp(QMainWindow):
         self.narr_input = self.create_file_row(form, "Narration Audio:", filter_a, AUDIO_DIR)
         self.bgm_input = self.create_file_row(form, "Background Music:", filter_a, BGM_DIR)
 
-        self.narr_slider = self.create_slider_row(form, "Narration Volume:", 0, 200, 100)
-        self.music_slider = self.create_slider_row(form, "Music Volume:", 0, 50, 18)
+        self.narr_slider = self.create_slider_row(form, "Narration Volume:", 0, 200, 150)
+        self.music_slider = self.create_slider_row(form, "Music Volume:", 0, 50, 15)
 
         self.preset_combo = QComboBox()
         self.preset_combo.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
