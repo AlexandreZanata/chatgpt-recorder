@@ -53,8 +53,8 @@ def build_single_pass_command(
         cmd.extend(["-t", f"{duration:.3f}"])
 
     cmd.extend([
-        "-c:v", "h264_nvenc", "-preset", "p3", "-cq", "20",
-        "-g", "150", "-r", str(fps), "-c:a", "aac", "-b:a", "192k",
+        "-c:v", "h264_nvenc", "-preset", "p3", "-rc", "constqp", "-qp", "28",
+        "-g", "150", "-r", str(fps), "-c:a", "aac", "-b:a", "128k",
         "-movflags", "+faststart", str(output_path)
     ])
     return cmd
