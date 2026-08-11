@@ -79,15 +79,20 @@
       color: var(--muted);
       word-break: break-all;
     }
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
     .action-btn {
+      flex: 1;
       background: rgba(99, 102, 241, 0.2);
       border: 1px solid rgba(99, 102, 241, 0.4);
       color: var(--text);
       font-size: 11px;
-      padding: 4px 8px;
+      padding: 5px 8px;
       border-radius: 4px;
       cursor: pointer;
-      margin-top: 8px;
     }
     .clear-btn {
       background: transparent;
@@ -132,7 +137,11 @@
       <label class="setting-label" for="subfolder">Subfolder (optional)</label>
       <input type="text" id="subfolder" placeholder="e.g. chatgpt-audio">
     </div>
-    <button class="action-btn" id="exportSettings">Export Settings (JSON)</button>
+    <div class="btn-group">
+      <button class="action-btn" id="exportSettings">Export</button>
+      <button class="action-btn" id="importSettings">Import</button>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+    </div>
   </div>
 
   <div class="card">

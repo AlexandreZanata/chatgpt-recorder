@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Popup UI Logic (With Export)
+// ChatGPT Audio Capture — Popup UI Logic (With Import/Export)
 
 function renderHistory(items) {
   const container = document.getElementById('historyList');
@@ -38,22 +38,35 @@ function triggerExport(data, filename) {
   }
 }
 
-function bindButtons() {
+function handleImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const settings = JSON.parse(e.target.result);
+      if (typeof browser !== 'undefined' && browser.storage) {
+        browser.storage.local.set(settings).then(() => loadSettings());
+      }
+    } catch (err) {
+      console.error('Invalid JSON settings file:', err);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function bindActionButtons() {
   const clearBtn = document.getElementById('clearHistory');
   const exportBtn = document.getElementById('exportSettings');
+  const importBtn = document.getElementById('importSettings');
+  const importFile = document.getElementById('importFile');
 
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      if (typeof browser !== 'undefined' && browser.storage) {
-        browser.storage.local.set({ captureHistory: [] }).then(() => renderHistory([]));
-      }
-    });
-  }
-  if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
-      if (typeof browser !== 'undefined' && browser.storage) {
-        browser.storage.local.get(null).then((s) => triggerExport(s, 'chatgpt-recorder-settings.json'));
-      }
+  if (clearBtn) clearBtn.addEventListener('click', () => updateStorage({ captureHistory: [] }));
+  if (exportBtn) exportBtn.addEventListener('click', () => {
+    browser?.storage?.local?.get(null).then((s) => triggerExport(s, 'chatgpt-recorder-settings.json'));
+  });
+  if (importBtn && importFile) {
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) handleImportFile(e.target.files[0]);
     });
   }
 }
@@ -84,7 +97,7 @@ function bindEvents() {
   bindInputListener('prefix', 'input', 'filenamePrefix', false);
   bindInputListener('template', 'input', 'filenameTemplate', false);
   bindInputListener('subfolder', 'input', 'subfolder', false);
-  bindButtons();
+  bindActionButtons();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
