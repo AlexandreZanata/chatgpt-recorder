@@ -13,7 +13,7 @@
       --muted: #94a3b8;
     }
     body {
-      width: 280px;
+      width: 320px;
       margin: 0;
       padding: 16px;
       font-family: system-ui, -apple-system, sans-serif;
@@ -23,18 +23,18 @@
     .header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
+      justify-content: space-between;
+      margin-bottom: 14px;
     }
     .header h1 {
-      font-size: 16px;
+      font-size: 15px;
       margin: 0;
       font-weight: 600;
     }
     .card {
       background: var(--card-bg);
       backdrop-filter: blur(8px);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 12px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       margin-bottom: 12px;
@@ -43,10 +43,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .setting-label {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text);
     }
     input[type="text"] {
@@ -58,12 +58,39 @@
       border-radius: 6px;
       font-size: 12px;
       box-sizing: border-box;
+      margin-top: 4px;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .history-list {
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+    .history-item {
+      padding: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      word-break: break-all;
+    }
+    .clear-btn {
+      background: transparent;
+      border: none;
+      color: #f43f5e;
+      font-size: 11px;
+      cursor: pointer;
     }
     .status-badge {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
     }
     .dot {
@@ -83,14 +110,29 @@
       <span class="setting-label">Auto Download</span>
       <input type="checkbox" id="autoDownload" checked>
     </div>
-    <div style="margin-top: 8px;">
+    <div style="margin-top: 6px;">
       <label class="setting-label" for="prefix">Filename Prefix</label>
       <input type="text" id="prefix" value="chatgpt-tts">
     </div>
+    <div style="margin-top: 8px;">
+      <label class="setting-label" for="subfolder">Subfolder (optional)</label>
+      <input type="text" id="subfolder" placeholder="e.g. chatgpt-audio">
+    </div>
   </div>
+
+  <div class="card">
+    <div class="history-header">
+      <span>Recent Captures</span>
+      <button class="clear-btn" id="clearHistory">Clear</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-item">No captures yet</div>
+    </div>
+  </div>
+
   <div class="status-badge">
     <span class="dot"></span>
-    <span id="statusText">Status: Ready</span>
+    <span>Status: Ready</span>
   </div>
   <script src="src/popup.js" type="module"></script>
 </body>

@@ -14,9 +14,16 @@ export const TTS_URL_PATTERNS = [
   '*://*.oaiusercontent.com/*'
 ];
 
-export const MESSAGE_TYPES = {
-  STATE_CHANGE: 'STATE_CHANGE',
-  AUDIO_CAPTURED: 'AUDIO_CAPTURED',
-  EXTRACT_TITLE: 'EXTRACT_TITLE',
-  TITLE_RESPONSE: 'TITLE_RESPONSE'
+export const STORAGE_KEYS = {
+  AUTO_DOWNLOAD: 'autoDownload',
+  FILENAME_PREFIX: 'filenamePrefix',
+  SUBFOLDER: 'subfolder',
+  CAPTURE_HISTORY: 'captureHistory'
+};
+
+export const DEFAULTS = {
+  AUTO_DOWNLOAD: true,
+  FILENAME_PREFIX: 'chatgpt-tts',
+  SUBFOLDER: '',
+  MAX_HISTORY: 20
 };
