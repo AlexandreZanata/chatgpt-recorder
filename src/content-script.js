@@ -24,6 +24,17 @@ function injectMainWorldScript() {
   (document.head || document.documentElement).appendChild(script);
 }
 
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CHATGPT_AUDIO_CAPTURED_DATA') {
+    const title = extractConversationTitle();
+    browser.runtime.sendMessage({
+      type: 'FALLBACK_AUDIO_DATA',
+      dataUrl: event.data.dataUrl,
+      title: title
+    });
+  }
+});
+
 if (typeof browser !== 'undefined' && browser.runtime) {
   browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request && request.type === 'EXTRACT_TITLE') {

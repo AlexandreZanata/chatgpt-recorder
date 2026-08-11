@@ -1,4 +1,4 @@
-// ChatGPT Audio Capture — Background Service (Enhanced Stream & Fallback Bridge)
+// ChatGPT Audio Capture — Background Service (Network & WebAudio Interceptor)
 
 const LISTEN_URLS = [
   '*://chatgpt.com/*',
@@ -51,7 +51,7 @@ function formatFilename(tmpl, prefix, title, mimeType) {
   const now = new Date();
   const d = now.toISOString().split('T')[0];
   const t = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-  const ext = MIME_MAP[mimeType] || '.mp3';
+  const ext = MIME_MAP[mimeType] || '.webm';
   const pattern = tmpl || '{prefix}_{date}_{title}';
   const name = pattern
     .replace(/\{prefix\}/g, prefix || 'chatgpt-tts')
@@ -122,4 +122,16 @@ if (typeof browser !== 'undefined' && browser.webRequest) {
     { urls: LISTEN_URLS },
     ['blocking']
   );
+}
+
+if (typeof browser !== 'undefined' && browser.runtime) {
+  browser.runtime.onMessage.addListener((message) => {
+    if (message && message.type === 'FALLBACK_AUDIO_DATA' && message.dataUrl) {
+      fetch(message.dataUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          triggerDownload(blob, message.title || 'chatgpt-session', blob.type || 'audio/webm');
+        });
+    }
+  });
 }
