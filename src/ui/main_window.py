@@ -34,17 +34,18 @@ class RenderWorker(QThread):
     def run(self):
         try:
             total_dur = get_audio_duration(self.narr)
-            self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {total_dur:.1f}s)...")
+            render_dur = total_dur + 3.0 if total_dur > 0 else 0.0
+            self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {render_dur:.1f}s)...")
 
             def on_progress(pct_val: float, sec_val: float):
-                msg = f"Single-Pass GPU Encoding ({sec_val:.1f}s / {total_dur:.1f}s)..."
+                msg = f"Single-Pass GPU Encoding ({sec_val:.1f}s / {render_dur:.1f}s)..."
                 self.progress.emit(int(pct_val), msg)
 
             w, h = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
             ok = render_single_pass_video(
                 self.img, self.narr, self.bgm, None, self.out,
                 narr_vol=self.n_vol, bgm_vol=self.m_vol, width=w, height=h,
-                progress_callback=on_progress, total_duration=total_dur
+                progress_callback=on_progress, total_duration=render_dur
             )
 
             self.progress.emit(100, "Rendering complete!")

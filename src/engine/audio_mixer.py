@@ -1,18 +1,26 @@
 """FFmpeg Audio Mixer module for combining narration and looping background music."""
 
+import re
 import subprocess
 from pathlib import Path
 
 
 def get_audio_duration(audio_path: Path) -> float:
-    """Extract audio duration in seconds using ffprobe."""
-    cmd = [
+    """Extract exact real audio duration in seconds using fast stream demuxing."""
+    cmd = ["ffmpeg", "-y", "-i", str(audio_path), "-c", "copy", "-f", "null", "-"]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    times = re.findall(r"time=(\d+):(\d+):(\d+\.\d+)", res.stderr)
+    if times:
+        h, m, s = times[-1]
+        return float(h) * 3600 + float(m) * 60 + float(s)
+
+    cmd_probe = [
         "ffprobe", "-v", "error", "-show_entries", "format=duration",
         "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)
     ]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return float(res.stdout.strip())
+        res_p = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
+        return float(res_p.stdout.strip())
     except (subprocess.SubprocessError, ValueError):
         return 0.0
 
@@ -46,8 +54,8 @@ def mix_audio_tracks(
     narration_path: Path,
     bgm_path: Path | None,
     output_audio_path: Path,
-    narration_volume: float = 1.0,
-    bgm_volume: float = 0.18,
+    narration_volume: float = 1.5,
+    bgm_volume: float = 0.15,
 ) -> bool:
     """Execute FFmpeg audio mixing."""
     cmd = build_audio_mix_command(
