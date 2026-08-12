@@ -34,7 +34,7 @@ class RenderWorker(QThread):
     def run(self):
         try:
             total_dur = get_audio_duration(self.narr)
-            render_dur = total_dur + 3.0 if total_dur > 0 else 0.0
+            render_dur = total_dur + 30.0 if total_dur > 0 else 0.0
             self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {render_dur:.1f}s)...")
 
             def on_progress(pct_val: float, sec_val: float):
