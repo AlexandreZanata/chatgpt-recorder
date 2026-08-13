@@ -137,11 +137,17 @@ class VideoGeneratorApp(QMainWindow):
         self.progress_bar.setValue(val)
         self.status_label.setText(msg)
 
+    def get_next_suggested_video_path(self):
+        n = 1
+        while (VIDEO_DIR / f"{n}.mp4").exists():
+            n += 1
+        return str(VIDEO_DIR / f"{n}.mp4")
+
     def start_rendering(self):
         img = Path(self.img_input.text())
         narr = Path(self.narr_input.text())
         bgm = Path(self.bgm_input.text()) if self.bgm_input.text() else None
-        default_out = str(VIDEO_DIR / "output_video.mp4")
+        default_out = self.get_next_suggested_video_path()
         output, _ = QFileDialog.getSaveFileName(self, "Save Video", default_out, "MP4 Video (*.mp4)")
 
         if not img.is_file() or not narr.is_file() or not output:
