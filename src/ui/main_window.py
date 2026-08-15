@@ -85,7 +85,12 @@ class VideoGeneratorApp(QMainWindow):
         self.preset_combo.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
         form.addRow("Video Preset:", self.preset_combo)
 
-        self.no_bgm_cb = QCheckBox("Criar sem música de fundo (Apenas Narração)")
+        self.no_bgm_cb = QCheckBox("🎵 Criar sem música de fundo (Apenas Narração)")
+        self.no_bgm_cb.setStyleSheet(
+            "QCheckBox { font-weight: bold; font-size: 13px; color: #4338ca; "
+            "background-color: #e0e7ff; border: 2px solid #6366f1; border-radius: 6px; padding: 6px 12px; }"
+            "QCheckBox::indicator { width: 18px; height: 18px; }"
+        )
         form.addRow("", self.no_bgm_cb)
 
         layout.addLayout(form)
