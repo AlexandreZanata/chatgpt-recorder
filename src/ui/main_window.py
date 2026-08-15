@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
+    QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QProgressBar, QPushButton, QSlider,
     QVBoxLayout, QWidget,
 )
@@ -85,6 +85,9 @@ class VideoGeneratorApp(QMainWindow):
         self.preset_combo.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
         form.addRow("Video Preset:", self.preset_combo)
 
+        self.no_bgm_cb = QCheckBox("Criar sem música de fundo (Apenas Narração)")
+        form.addRow("", self.no_bgm_cb)
+
         layout.addLayout(form)
         self.progress_bar = QProgressBar()
         layout.addWidget(self.progress_bar)
@@ -146,7 +149,8 @@ class VideoGeneratorApp(QMainWindow):
     def start_rendering(self):
         img = Path(self.img_input.text())
         narr = Path(self.narr_input.text())
-        bgm = Path(self.bgm_input.text()) if self.bgm_input.text() else None
+        has_bgm = not self.no_bgm_cb.isChecked() and bool(self.bgm_input.text())
+        bgm = Path(self.bgm_input.text()) if has_bgm else None
         default_out = self.get_next_suggested_video_path()
         output, _ = QFileDialog.getSaveFileName(self, "Save Video", default_out, "MP4 Video (*.mp4)")
 
