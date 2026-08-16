@@ -26,15 +26,18 @@ class RenderWorker(QThread):
     progress = Signal(int, str)
     finished = Signal(bool, str)
 
-    def __init__(self, img: Path, narr: Path, bgm: Path | None, out: Path, n_vol: float, m_vol: float, preset: str):
+    def __init__(self, img: Path, narr: Path, bgm: Path | None, out: Path, n_vol: float, m_vol: float, preset: str, quick_outro: bool = False):
         super().__init__()
         self.img, self.narr, self.bgm, self.out = img, narr, bgm, out
-        self.n_vol, self.m_vol, self.preset = n_vol, m_vol, preset
+        self.n_vol, self.m_vol, self.preset, self.quick_outro = n_vol, m_vol, preset, quick_outro
 
     def run(self):
         try:
             total_dur = get_audio_duration(self.narr)
-            outro_margin = 0.0 if self.preset != "YouTube Standard (16:9)" else 30.0
+            if self.preset != "YouTube Standard (16:9)":
+                outro_margin = 0.0
+            else:
+                outro_margin = 5.0 if self.quick_outro else 30.0
             render_dur = total_dur + outro_margin if total_dur > 0 else 0.0
             self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {render_dur:.1f}s)...")
 
@@ -62,7 +65,7 @@ class VideoGeneratorApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
         self.setObjectName("ChatGPTVideoStudio")
-        self.resize(650, 500)
+        self.resize(650, 520)
         for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR, VIDEO_DIR):
             d.mkdir(exist_ok=True)
         self.init_ui()
@@ -86,13 +89,16 @@ class VideoGeneratorApp(QMainWindow):
         self.preset_combo.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
         form.addRow("Video Preset:", self.preset_combo)
 
+        style_ind = "QCheckBox { font-weight: bold; font-size: 13px; color: #4338ca; background-color: #e0e7ff; border: 2px solid #6366f1; border-radius: 6px; padding: 5px 10px; } QCheckBox::indicator { width: 18px; height: 18px; }"
+        style_red = "QCheckBox { font-weight: bold; font-size: 13px; color: #991b1b; background-color: #fee2e2; border: 2px solid #ef4444; border-radius: 6px; padding: 5px 10px; } QCheckBox::indicator { width: 18px; height: 18px; }"
+
         self.no_bgm_cb = QCheckBox("🎵 Criar sem música de fundo (Apenas Narração)")
-        self.no_bgm_cb.setStyleSheet(
-            "QCheckBox { font-weight: bold; font-size: 13px; color: #4338ca; "
-            "background-color: #e0e7ff; border: 2px solid #6366f1; border-radius: 6px; padding: 6px 12px; }"
-            "QCheckBox::indicator { width: 18px; height: 18px; }"
-        )
+        self.no_bgm_cb.setStyleSheet(style_ind)
         form.addRow("", self.no_bgm_cb)
+
+        self.quick_outro_cb = QCheckBox("⏱️ Encerramento rápido (+5s de música no final)")
+        self.quick_outro_cb.setStyleSheet(style_red)
+        form.addRow("", self.quick_outro_cb)
 
         layout.addLayout(form)
         self.progress_bar = QProgressBar()
@@ -171,6 +177,7 @@ class VideoGeneratorApp(QMainWindow):
             self.narr_slider.value() / 100.0,
             self.music_slider.value() / 100.0,
             self.preset_combo.currentText(),
+            quick_outro=self.quick_outro_cb.isChecked(),
         )
         self.worker.progress.connect(self.update_progress)
         self.worker.finished.connect(self.on_render_finished)
