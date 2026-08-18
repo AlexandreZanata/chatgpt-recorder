@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Image & Metadata Extractor",
+  "version": "0.1.0",
+  "description": "Extrai automaticamente todos os metadados, prompts e estados de imagens geradas no ChatGPT e baixa no Downloads.",
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestFilterResponse",
+    "downloads",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://chatgpt.com/*",
+    "*://*.oaiusercontent.com/*",
+    "*://*.openai.com/*"
+  ],
+  "background": {
+    "scripts": ["src/background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://chatgpt.com/*"],
+      "js": ["src/content-script.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/page-injector.js"],
+      "matches": ["*://chatgpt.com/*"]
+    }
+  ],
+  "action": {
+    "default_icon": "icons/icon-idle.svg",
+    "default_title": "ChatGPT Image Extractor",
+    "default_popup": "popup.html"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "chatgpt-image-extractor@zaflas.local",
+      "strict_min_version": "115.0"
+    }
+  }
+}

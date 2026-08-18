@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ChatGPT Image & Metadata Extractor</title>
+  <style>
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    h2 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      color: #10b981;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .row:last-child {
+      margin-bottom: 0;
+    }
+    label {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      color: #f8fafc;
+      font-size: 12px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+    button {
+      width: 100%;
+      padding: 8px;
+      background: #10b981;
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #059669;
+    }
+    .status {
+      font-size: 11px;
+      color: #10b981;
+      text-align: center;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h2>🖼️ Image Extractor</h2>
+  <div class="card">
+    <div class="row">
+      <span>Auto-download Image</span>
+      <input type="checkbox" id="autoImage" checked>
+    </div>
+    <div class="row">
+      <span>Auto-download Metadata JSON</span>
+      <input type="checkbox" id="autoMeta" checked>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="prefix">Filename Prefix</label>
+    <input type="text" id="prefix" value="chatgpt-img">
+    <label for="subfolder">Subfolder in Downloads</label>
+    <input type="text" id="subfolder" value="chatgpt-images">
+    <button id="saveBtn">Save Settings</button>
+    <div class="status" id="statusMsg"></div>
+  </div>
+
+  <script src="src/popup.js" type="module"></script>
+</body>
+</html>
