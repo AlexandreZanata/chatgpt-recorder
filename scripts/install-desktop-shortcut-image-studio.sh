@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create GNOME Desktop Application Shortcut for AI Image Studio
+# Create Desktop Application Shortcut for AI Image Studio on Pop!_OS / COSMIC / GNOME
 
 set -euo pipefail
 
@@ -19,9 +19,9 @@ Type=Application
 Name=AI Image Studio (RTX 4060)
 GenericName=Gerador de Imagens IA Local
 Comment=Gerador de Imagens SDXL Local de Alta Qualidade sem Filtros
-Exec=gnome-terminal -- bash -c "${LAUNCHER}; exec bash"
+Exec=x-terminal-emulator -e bash -c "${LAUNCHER}"
 Icon=${ICON_PATH}
-Terminal=false
+Terminal=true
 Categories=Graphics;Photography;AI;
 Keywords=Image;AI;SDXL;Fooocus;Generation;
 StartupNotify=true
@@ -30,6 +30,5 @@ EOF
 chmod +x "${DESKTOP_FILE}"
 update-desktop-database "${APPS_DIR}" 2>/dev/null || true
 
-echo "[ok] Atalho de aplicativo criado com sucesso em:"
+echo "[ok] Atalho de aplicativo atualizado para terminal nativo em:"
 echo "     ${DESKTOP_FILE}"
-echo "[ok] O 'AI Image Studio (RTX 4060)' agora está disponível no menu de aplicativos do Pop!_OS!"

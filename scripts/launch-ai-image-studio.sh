@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launcher for AI Image Studio (Fooocus SDXL on RTX 4060)
 
-set -euo pipefail
+set -uo pipefail
 
 TARGET_DIR="${HOME}/PESSOAL-PROJETOS-ALEXANDRE/Fooocus"
 VENV_DIR="${TARGET_DIR}/venv"
@@ -15,4 +15,7 @@ fi
 cd "${TARGET_DIR}"
 
 echo "[info] Iniciando AI Image Studio (Fooocus) na GPU RTX 4060..."
-"${VENV_DIR}/bin/python" launch.py --listen 127.0.0.1 --port 7865 --gpu-device-id 0 --auto-launch
+"${VENV_DIR}/bin/python" launch.py --listen 127.0.0.1 --port 7865 --gpu-device-id 0 --in-browser
+
+echo ""
+read -r -p "Pressione Enter para fechar..."
