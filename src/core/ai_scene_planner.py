@@ -1,17 +1,14 @@
-"""Scene Planner: partitions narration audio into timed blocks and builds master-themed image prompts."""
+"""Scene Planner: partitions narration audio into timed blocks and builds master-themed image prompts representing each excerpt."""
 
 from typing import Any, Dict, List
 import re
 
 
-def sanitize_prompt_keywords(text: str) -> str:
-    """Extract clean descriptive words from transcript text."""
-    clean = re.sub(r"[^a-zA-Z0-9\s]", " ", text)
-    words = [w.lower() for w in clean.split() if len(w) > 3]
-    # Remove common stop words
-    stop = {"this", "that", "with", "from", "have", "they", "will", "would", "there", "about"}
-    filtered = [w for w in words if w not in stop]
-    return ", ".join(filtered[:8]) if filtered else "dynamic scene, high detail"
+def clean_narrative_excerpt(text: str) -> str:
+    """Clean and summarize speech excerpt for AI image generation."""
+    clean = re.sub(r"\s+", " ", text).strip()
+    clean = re.sub(r"[^a-zA-Z0-9\s,.-]", "", clean)
+    return clean[:160] if clean else "dynamic scene moment"
 
 
 def plan_scenes_from_duration(
@@ -20,7 +17,7 @@ def plan_scenes_from_duration(
     master_theme: str = "Cinematic Miami Luxury, 8k resolution, photorealistic",
     transcript_segments: List[Dict[str, Any]] = None
 ) -> List[Dict[str, Any]]:
-    """Plan video scenes by slicing total duration into intervals with tailored prompts."""
+    """Plan video scenes by slicing duration and creating English prompts that visually represent each excerpt."""
     transcript_segments = transcript_segments or []
     scenes = []
     current_time = 0.0
@@ -31,22 +28,27 @@ def plan_scenes_from_duration(
         end_t = min(current_time + interval_sec, total_duration_sec)
         dur = end_t - start_t
 
-        # Gather transcript text within this window
+        # Gather transcript text within this specific window
         seg_texts = [
             s.get("text", "").strip()
             for s in transcript_segments
-            if s.get("start", 0.0) >= start_t and s.get("end", 0.0) <= (end_t + 2.0)
+            if s.get("start", 0.0) >= start_t and s.get("end", 0.0) <= (end_t + 1.5)
         ]
         combined_text = " ".join(seg_texts).strip()
-        keywords = sanitize_prompt_keywords(combined_text) if combined_text else f"scene {scene_idx}"
+        excerpt = clean_narrative_excerpt(combined_text) if combined_text else f"Scene {scene_idx} unfolding"
 
-        prompt = f"{master_theme}, depicting {keywords}, cinematic composition, 8k"
+        # Explicit narrative prompt representing the spoken excerpt in English
+        prompt = (
+            f"A vivid cinematic photograph representing the excerpt: '{excerpt}'. "
+            f"Theme: {master_theme}, highly detailed, sharp focus, 8k, photorealistic masterpiece"
+        )
+
         scenes.append({
             "scene_index": scene_idx,
             "start_sec": round(start_t, 2),
             "end_sec": round(end_t, 2),
             "duration_sec": round(dur, 2),
-            "summary_text": combined_text[:120] if combined_text else f"Section {scene_idx}",
+            "excerpt": excerpt,
             "prompt": prompt,
             "image_path": ""
         })
