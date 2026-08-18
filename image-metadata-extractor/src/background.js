@@ -54,6 +54,21 @@ function formatBaseName(tmpl, prefix, title) {
     .replace(/\{title\}/g, cleanTitle);
 }
 
+function dataUrlToBlob(dataUrl) {
+  try {
+    const parts = dataUrl.split(',');
+    const byteString = atob(parts[1]);
+    const mime = parts[0].split(':')[1].split(';')[0];
+    const u8arr = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+      u8arr[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([u8arr], { type: mime });
+  } catch (_) {
+    return null;
+  }
+}
+
 function downloadFile(url, filename) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
   browser.downloads.download({ url, filename, saveAs: false }).catch((err) => {
@@ -101,11 +116,13 @@ function handleStageFrame(frame) {
     subfolder: 'chatgpt-images'
   }).then((s) => {
     if (!s.autoDownloadFrames) return;
+    const blob = dataUrlToBlob(frame.dataUrl);
+    if (!blob) return;
     const folder = s.subfolder ? `${s.subfolder.replace(/\/$/, '')}/stages/` : 'stages/';
     const base = formatBaseName('{prefix}_{date}_{time}_{title}', s.filenamePrefix, frame.pageTitle || 'stage');
     const filename = `${folder}${base}_stage_${frame.stageIndex}.png`;
     currentContext.stages.push(filename);
-    downloadFile(frame.dataUrl, filename);
+    downloadFile(URL.createObjectURL(blob), filename);
   });
 }
 
