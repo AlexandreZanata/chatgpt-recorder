@@ -64,8 +64,9 @@ class AutoStoryWorker(QThread):
                 render_scene_clip(str(img_p), scene["duration_sec"], clip_out, motion_type=m_type, width=w, height=h)
                 clip_paths.append(clip_out)
 
-            self.progress.emit(85, "Concatenando vídeo final com áudio e legendas...")
-            concatenate_scenes_with_audio(clip_paths, str(self.narr_path), str(self.out_path), subtitles_srt_path=srt_file)
+            self.progress.emit(85, "Concatenando vídeo final com áudio, música e legendas...")
+            bgm_str = str(self.bgm_path) if self.bgm_path and self.bgm_path.exists() else None
+            concatenate_scenes_with_audio(clip_paths, str(self.narr_path), str(self.out_path), bgm_path=bgm_str, narr_vol=self.narr_vol, bgm_vol=self.bgm_vol, subtitles_srt_path=srt_file)
 
             self.progress.emit(100, "Vídeo com IA gerado com sucesso!")
             self.finished.emit(True, f"Vídeo salvo em: {self.out_path}")
