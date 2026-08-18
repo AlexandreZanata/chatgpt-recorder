@@ -16,7 +16,6 @@ def create_classic_fields(form: QFormLayout, parent_browse_cb, img_dir, aud_dir,
     w_img, in_img = create_file_row("Background Image:", "Image (*.png *.jpg *.webp)", img_dir, parent_browse_cb)
     w_narr, in_narr = create_file_row("Narration Audio:", filter_a, aud_dir, parent_browse_cb)
     w_bgm, in_bgm = create_file_row("Background Music:", filter_a, bgm_dir, parent_browse_cb)
-
     w_ns, s_narr = create_slider_row("Narration Volume:", 0, 200, 150)
     w_ms, s_music = create_slider_row("Music Volume:", 0, 50, 15)
 
@@ -32,10 +31,16 @@ def create_classic_fields(form: QFormLayout, parent_browse_cb, img_dir, aud_dir,
     }
 
 
-def create_auto_story_fields(form: QFormLayout, parent_browse_cb, aud_dir):
+def create_auto_story_fields(form: QFormLayout, parent_browse_cb, aud_dir, bgm_dir):
     """Build input fields for Auto AI Story Video Mode."""
     filter_a = "Audio (*.aac *.m4a *.mp3 *.wav *.ogg *.flac)"
     w_narr, in_narr = create_file_row("Narration Audio:", filter_a, aud_dir, parent_browse_cb)
+    w_bgm, in_bgm = create_file_row("Background Music:", filter_a, bgm_dir, parent_browse_cb)
+    w_ns, s_narr = create_slider_row("Narration Volume:", 0, 200, 150)
+    w_ms, s_music = create_slider_row("Music Volume:", 0, 50, 15)
+
+    preset = QComboBox()
+    preset.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
 
     spin_interval = QSpinBox()
     spin_interval.setRange(15, 180)
@@ -44,22 +49,23 @@ def create_auto_story_fields(form: QFormLayout, parent_browse_cb, aud_dir):
     spin_interval.setSuffix(" segundos")
 
     in_theme = QLineEdit("Cinematic Miami Luxury, 8k resolution, photorealistic")
-
     cb_model = QComboBox()
     models = get_available_checkpoints() or ["RealVisXL_V5.0_fp16.safetensors", "juggernautXL_v8Rundiffusion.safetensors"]
     cb_model.addItems(models)
 
     cb_subtitles = QCheckBox("💬 Incluir Legendas Sincronizadas (.srt)")
     cb_subtitles.setChecked(True)
-
     cb_motion = QCheckBox("🎥 Movimento Dinâmico Ken Burns (Zoom/Pan Aleatório)")
     cb_motion.setChecked(True)
 
     return {
-        "rows": [("Narration Audio:", w_narr), ("Trocar Imagem a Cada:", spin_interval),
+        "rows": [("Narration Audio:", w_narr), ("Background Music:", w_bgm),
+                 ("Narration Volume:", w_ns), ("Music Volume:", w_ms),
+                 ("Video Preset:", preset), ("Trocar Imagem a Cada:", spin_interval),
                  ("Tema Mestre das Cenas:", in_theme), ("Modelo IA SDXL:", cb_model),
                  ("", cb_subtitles), ("", cb_motion)],
-        "in_narr": in_narr, "interval": spin_interval, "theme": in_theme,
+        "in_narr": in_narr, "in_bgm": in_bgm, "s_narr": s_narr, "s_music": s_music,
+        "preset": preset, "interval": spin_interval, "theme": in_theme,
         "model": cb_model, "subtitles": cb_subtitles, "motion": cb_motion
     }
 
