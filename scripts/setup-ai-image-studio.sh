@@ -29,8 +29,8 @@ echo "[3/4] Instalando PyTorch com aceleração CUDA para RTX 4060..."
 "${VENV_DIR}/bin/pip" install --upgrade pip
 "${VENV_DIR}/bin/pip" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 
-echo "[4/4] Instalando dependências do Fooocus..."
-"${VENV_DIR}/bin/pip" install -r requirements_versions.txt
+echo "[4/4] Instalando dependências do Fooocus com compatibilidade Python 3.12..."
+"${VENV_DIR}/bin/pip" install -r requirements_versions.txt "pydantic<2" "fastapi==0.95.2" "starlette==0.27.0" "uvicorn==0.22.0" "jinja2==3.1.2"
 
 echo ""
 echo "=========================================================="
