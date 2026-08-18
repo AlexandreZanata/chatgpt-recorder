@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launcher for AI Image Studio (Fooocus SDXL on RTX 4060 — Maximum Performance Mode)
+# Launcher for AI Image Studio (Fooocus SDXL on RTX 4060 — Optimized Stable Mode)
 
 set -uo pipefail
 
@@ -18,8 +18,8 @@ export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 export CUDA_MODULE_LOADING="LAZY"
 
 echo "=========================================================="
-echo " ⚡ Iniciando AI Image Studio — Modo Máxima Performance RTX 4060"
-echo " 🚀 VRAM: High-VRAM sem descarregamento | Tensor Cores: FP16"
+echo " ⚡ Iniciando AI Image Studio — RTX 4060 (Aceleração CUDA FP16)"
+echo " 🚀 VRAM Dinâmica Inteligente (Zero OOM) | Tensor Cores Ativos"
 echo "=========================================================="
 
 "${VENV_DIR}/bin/python" launch.py \
@@ -27,8 +27,6 @@ echo "=========================================================="
   --port 7865 \
   --gpu-device-id 0 \
   --in-browser \
-  --always-high-vram \
-  --disable-offload-from-vram \
   --async-cuda-allocation \
   --attention-pytorch \
   --unet-in-fp16 \
