@@ -56,7 +56,9 @@ function formatBaseName(tmpl, prefix, title) {
 
 function downloadFile(url, filename) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
-  browser.downloads.download({ url, filename, saveAs: false });
+  browser.downloads.download({ url, filename, saveAs: false }).catch((err) => {
+    console.warn('[ImageExtractor] downloadFile error:', err);
+  });
 }
 
 function triggerDownloads(imageBlob, metadataObj, title, mimeType) {
