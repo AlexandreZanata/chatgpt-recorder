@@ -4,6 +4,8 @@
   'use strict';
 
   const EVENT_NAME = '__CHATGPT_IMAGE_METADATA_EVENT__';
+  const FRAME_EVENT = '__CHATGPT_IMAGE_FRAME_EVENT__';
+  const capturedStages = new Set();
 
   function injectScript() {
     try {
@@ -23,34 +25,48 @@
     return title.replace(/ChatGPT\s*[-–—|]?\s*/gi, '').trim() || 'chatgpt-image';
   }
 
-  function setupMetadataListener() {
+  function setupCustomListeners() {
+    const api = typeof browser !== 'undefined' ? browser : chrome;
     window.addEventListener(EVENT_NAME, (evt) => {
       if (!evt.detail) return;
       try {
         const payload = JSON.parse(evt.detail);
         payload.pageTitle = getConversationTitle();
         payload.url = window.location.href;
-        const api = typeof browser !== 'undefined' ? browser : chrome;
-        api.runtime.sendMessage({
-          type: 'IMAGE_METADATA_CAPTURED',
-          data: payload
-        }).catch(() => {});
+        api.runtime.sendMessage({ type: 'IMAGE_METADATA_CAPTURED', data: payload }).catch(() => {});
       } catch (err) {
         console.warn('[ImageExtractor] Parse event error:', err);
       }
     });
+
+    window.addEventListener(FRAME_EVENT, (evt) => {
+      if (!evt.detail) return;
+      try {
+        const frameData = JSON.parse(evt.detail);
+        frameData.pageTitle = getConversationTitle();
+        api.runtime.sendMessage({ type: 'INTERMEDIATE_FRAME_CAPTURED', data: frameData }).catch(() => {});
+      } catch (_) {}
+    });
+  }
+
+  function isTargetImageSrc(src) {
+    return src.includes('oaiusercontent.com') || src.includes('dalle') || src.startsWith('blob:');
   }
 
   function processImage(img) {
     const src = img.src || img.getAttribute('src') || '';
-    if (!src.includes('oaiusercontent.com') && !src.includes('dalle')) return;
+    if (!isTargetImageSrc(src) || capturedStages.has(src)) return;
+    capturedStages.add(src);
+
     const alt = img.alt || img.getAttribute('alt') || '';
+    const isBlob = src.startsWith('blob:');
     const api = typeof browser !== 'undefined' ? browser : chrome;
     api.runtime.sendMessage({
-      type: 'IMAGE_DOM_DISCOVERED',
+      type: isBlob ? 'INTERMEDIATE_STAGE_DISCOVERED' : 'IMAGE_DOM_DISCOVERED',
       data: {
         src,
         alt,
+        isIntermediate: isBlob,
         pageTitle: getConversationTitle(),
         timestamp: new Date().toISOString()
       }
@@ -93,7 +109,7 @@
   }
 
   injectScript();
-  setupMetadataListener();
+  setupCustomListeners();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', observeDOMImages);
   } else {

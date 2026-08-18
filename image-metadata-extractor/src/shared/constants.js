@@ -17,6 +17,7 @@ export const IMAGE_MIME_MAP = {
 export const STORAGE_KEYS = {
   AUTO_DOWNLOAD_IMAGE: 'autoDownloadImage',
   AUTO_DOWNLOAD_METADATA: 'autoDownloadMetadata',
+  AUTO_DOWNLOAD_FRAMES: 'autoDownloadFrames',
   FILENAME_PREFIX: 'filenamePrefix',
   FILENAME_TEMPLATE: 'filenameTemplate',
   SUBFOLDER: 'subfolder',
@@ -26,12 +27,14 @@ export const STORAGE_KEYS = {
 export const DEFAULT_SETTINGS = {
   autoDownloadImage: true,
   autoDownloadMetadata: true,
+  autoDownloadFrames: true,
   filenamePrefix: 'chatgpt-img',
   filenameTemplate: '{prefix}_{date}_{time}_{title}',
   subfolder: 'chatgpt-images'
 };
 
 export const EVENT_NAME = '__CHATGPT_IMAGE_METADATA_EVENT__';
+export const FRAME_EVENT_NAME = '__CHATGPT_IMAGE_FRAME_EVENT__';
 
 export const ICONS = {
   idle: 'icons/icon-idle.svg',

@@ -54,6 +54,11 @@ function formatBaseName(tmpl, prefix, title) {
     .replace(/\{title\}/g, cleanTitle);
 }
 
+function downloadFile(url, filename) {
+  if (typeof browser === 'undefined' || !browser.downloads) return;
+  browser.downloads.download({ url, filename, saveAs: false });
+}
+
 function triggerImageAndMetadataDownload(imageBlob, metadataObj, title, mimeType) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
   browser.storage.local.get({
@@ -71,22 +76,28 @@ function triggerImageAndMetadataDownload(imageBlob, metadataObj, title, mimeType
     const folder = s.subfolder ? `${s.subfolder.replace(/\/$/, '')}/` : '';
 
     if (s.autoDownloadImage && imageBlob) {
-      browser.downloads.download({
-        url: URL.createObjectURL(imageBlob),
-        filename: `${folder}${base}${ext}`,
-        saveAs: false
-      });
+      downloadFile(URL.createObjectURL(imageBlob), `${folder}${base}${ext}`);
     }
 
     if (s.autoDownloadMetadata && metadataObj) {
       const metaBlob = new Blob([JSON.stringify(metadataObj, null, 2)], { type: 'application/json' });
-      browser.downloads.download({
-        url: URL.createObjectURL(metaBlob),
-        filename: `${folder}${base}_metadata.json`,
-        saveAs: false
-      });
+      downloadFile(URL.createObjectURL(metaBlob), `${folder}${base}_metadata.json`);
     }
     setTimeout(() => updateIcon('idle'), 3000);
+  });
+}
+
+function handleFrameDownload(frameData) {
+  if (typeof browser === 'undefined' || !browser.downloads) return;
+  browser.storage.local.get({
+    autoDownloadFrames: true,
+    filenamePrefix: 'chatgpt-img',
+    subfolder: 'chatgpt-images'
+  }).then((s) => {
+    if (!s.autoDownloadFrames || !frameData.dataUrl) return;
+    const folder = s.subfolder ? `${s.subfolder.replace(/\/$/, '')}/stages/` : 'stages/';
+    const base = formatBaseName('{prefix}_{date}_{time}_{title}', s.filenamePrefix, frameData.pageTitle || 'stage');
+    downloadFile(frameData.dataUrl, `${folder}${base}_frame_${frameData.frameIndex}.png`);
   });
 }
 
@@ -109,16 +120,13 @@ function attachFilter(details) {
     const blob = new Blob(chunks, { type: entry.mime });
     if (blob.size < 1024) return;
 
-    console.log('[ImageExtractor] Image captured:', blob.size, 'bytes, URL:', details.url);
     updateIcon('recording');
-
     const meta = latestMetadata || {
       extractedUrl: details.url,
       timestamp: new Date().toISOString(),
       mimeType: entry.mime,
       sizeBytes: blob.size
     };
-
     triggerImageAndMetadataDownload(blob, meta, meta.pageTitle || 'chatgpt-image', entry.mime);
   };
 
@@ -134,7 +142,6 @@ function markImageHeaders(details) {
   if (!ct) return;
   const mime = ct.value.split(';')[0].trim().toLowerCase();
   if (mime in IMAGE_MIME_MAP) {
-    console.log('[ImageExtractor] ✓ Image header found:', mime, details.url.slice(0, 100));
     pendingImages.set(details.requestId, { mime });
   }
 }
@@ -147,8 +154,9 @@ if (typeof browser !== 'undefined' && browser.webRequest) {
 if (typeof browser !== 'undefined' && browser.runtime) {
   browser.runtime.onMessage.addListener((msg) => {
     if (!msg) return;
-    if (msg.type === 'IMAGE_METADATA_CAPTURED' || msg.type === 'IMAGE_DOM_DISCOVERED') {
-      console.log('[ImageExtractor] Metadata event received:', msg.type);
+    if (msg.type === 'INTERMEDIATE_FRAME_CAPTURED' && msg.data) {
+      handleFrameDownload(msg.data);
+    } else if (msg.type === 'IMAGE_METADATA_CAPTURED' || msg.type === 'IMAGE_DOM_DISCOVERED') {
       latestMetadata = Object.assign({}, latestMetadata || {}, msg.data, {
         updatedAt: new Date().toISOString()
       });

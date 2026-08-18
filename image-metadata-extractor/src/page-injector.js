@@ -3,34 +3,52 @@
   'use strict';
 
   const EVENT_NAME = '__CHATGPT_IMAGE_METADATA_EVENT__';
+  const FRAME_EVENT = '__CHATGPT_IMAGE_FRAME_EVENT__';
+  let frameSequence = 0;
 
-  function dispatchMetadata(payload) {
+  function dispatch(name, payload) {
     if (!payload) return;
     try {
-      const event = new CustomEvent(EVENT_NAME, { detail: JSON.stringify(payload) });
-      window.dispatchEvent(event);
+      window.dispatchEvent(new CustomEvent(name, { detail: JSON.stringify(payload) }));
     } catch (e) {
       console.warn('[ImageExtractor] dispatch error:', e);
     }
   }
 
-  function extractFromParts(parts, conversationId, messageId) {
-    if (!Array.isArray(parts)) return;
-    for (const part of parts) {
-      if (!part) continue;
-      const isImg = part.content_type === 'image_asset_pointer' ||
-                    part.content_type === 'multimodal_text' ||
-                    (typeof part === 'string' && part.includes('image_asset_pointer'));
-      if (isImg) {
-        dispatchMetadata({
-          source: 'sse_stream_part',
-          conversationId,
-          messageId,
+  function handleImagePart(part, conversationId, messageId) {
+    if (!part) return;
+    const isImg = part.content_type === 'image_asset_pointer' ||
+                  part.content_type === 'multimodal_text' ||
+                  (typeof part === 'string' && part.includes('image_asset_pointer'));
+    if (isImg) {
+      dispatch(EVENT_NAME, {
+        source: 'sse_stream_part',
+        conversationId,
+        messageId,
+        timestamp: new Date().toISOString(),
+        part
+      });
+    }
+  }
+
+  function parseLineData(jsonStr, conversationId) {
+    try {
+      const data = JSON.parse(jsonStr);
+      const msg = data.message || {};
+      const parts = msg.content && msg.content.parts;
+      if (Array.isArray(parts)) {
+        for (const p of parts) handleImagePart(p, data.conversation_id, msg.id);
+      }
+      if (msg.metadata && msg.metadata.dalle) {
+        dispatch(EVENT_NAME, {
+          source: 'dalle_metadata',
+          conversationId: data.conversation_id,
+          messageId: msg.id,
           timestamp: new Date().toISOString(),
-          part
+          dalle: msg.metadata.dalle
         });
       }
-    }
+    } catch (_) {}
   }
 
   function parseConversationSSEChunk(text) {
@@ -39,26 +57,27 @@
       if (!line.startsWith('data: ')) continue;
       const jsonStr = line.slice(6).trim();
       if (jsonStr === '[DONE]') continue;
-      try {
-        const data = JSON.parse(jsonStr);
-        const msg = data.message || {};
-        const parts = msg.content && msg.content.parts;
-        if (parts) {
-          extractFromParts(parts, data.conversation_id, msg.id);
-        }
-        if (msg.metadata && msg.metadata.dalle) {
-          dispatchMetadata({
-            source: 'dalle_metadata',
-            conversationId: data.conversation_id,
-            messageId: msg.id,
-            timestamp: new Date().toISOString(),
-            dalle: msg.metadata.dalle
-          });
-        }
-      } catch (_) {
-        // partial chunk JSON, ignore
-      }
+      parseLineData(jsonStr);
     }
+  }
+
+  function monitorCanvasAndVideoFrames() {
+    setInterval(() => {
+      const canvases = document.querySelectorAll('canvas');
+      for (const c of canvases) {
+        if (c.width < 64 || c.height < 64) continue;
+        try {
+          const dataUrl = c.toDataURL('image/png');
+          frameSequence += 1;
+          dispatch(FRAME_EVENT, {
+            type: 'canvas_frame',
+            frameIndex: frameSequence,
+            timestamp: new Date().toISOString(),
+            dataUrl
+          });
+        } catch (_) {}
+      }
+    }, 1200);
   }
 
   function hookFetch() {
@@ -89,5 +108,6 @@
   }
 
   hookFetch();
-  console.log('[ImageExtractor] Page injector active for image metadata capture.');
+  monitorCanvasAndVideoFrames();
+  console.log('[ImageExtractor] Page injector active with frame extraction.');
 })();
