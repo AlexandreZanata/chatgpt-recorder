@@ -22,7 +22,7 @@ const ICONS = {
 
 let sessionImageCount = 0;
 const pendingImages = new Map();
-let latestMetadata = null;
+let currentContext = { stages: [] };
 
 function sanitize(str) {
   return (str || 'image').toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 50);
@@ -59,7 +59,7 @@ function downloadFile(url, filename) {
   browser.downloads.download({ url, filename, saveAs: false });
 }
 
-function triggerImageAndMetadataDownload(imageBlob, metadataObj, title, mimeType) {
+function triggerDownloads(imageBlob, metadataObj, title, mimeType) {
   if (typeof browser === 'undefined' || !browser.downloads) return;
   browser.storage.local.get({
     autoDownloadImage: true,
@@ -80,24 +80,30 @@ function triggerImageAndMetadataDownload(imageBlob, metadataObj, title, mimeType
     }
 
     if (s.autoDownloadMetadata && metadataObj) {
-      const metaBlob = new Blob([JSON.stringify(metadataObj, null, 2)], { type: 'application/json' });
+      const fullMeta = Object.assign({}, currentContext, metadataObj, {
+        savedAt: new Date().toISOString(),
+        finalImageFilename: `${base}${ext}`
+      });
+      const metaBlob = new Blob([JSON.stringify(fullMeta, null, 2)], { type: 'application/json' });
       downloadFile(URL.createObjectURL(metaBlob), `${folder}${base}_metadata.json`);
     }
     setTimeout(() => updateIcon('idle'), 3000);
   });
 }
 
-function handleFrameDownload(frameData) {
-  if (typeof browser === 'undefined' || !browser.downloads) return;
+function handleStageFrame(frame) {
+  if (typeof browser === 'undefined' || !browser.downloads || !frame.dataUrl) return;
   browser.storage.local.get({
     autoDownloadFrames: true,
     filenamePrefix: 'chatgpt-img',
     subfolder: 'chatgpt-images'
   }).then((s) => {
-    if (!s.autoDownloadFrames || !frameData.dataUrl) return;
+    if (!s.autoDownloadFrames) return;
     const folder = s.subfolder ? `${s.subfolder.replace(/\/$/, '')}/stages/` : 'stages/';
-    const base = formatBaseName('{prefix}_{date}_{time}_{title}', s.filenamePrefix, frameData.pageTitle || 'stage');
-    downloadFile(frameData.dataUrl, `${folder}${base}_frame_${frameData.frameIndex}.png`);
+    const base = formatBaseName('{prefix}_{date}_{time}_{title}', s.filenamePrefix, frame.pageTitle || 'stage');
+    const filename = `${folder}${base}_stage_${frame.stageIndex}.png`;
+    currentContext.stages.push(filename);
+    downloadFile(frame.dataUrl, filename);
   });
 }
 
@@ -121,13 +127,15 @@ function attachFilter(details) {
     if (blob.size < 1024) return;
 
     updateIcon('recording');
-    const meta = latestMetadata || {
+    const meta = {
       extractedUrl: details.url,
       timestamp: new Date().toISOString(),
       mimeType: entry.mime,
-      sizeBytes: blob.size
+      sizeBytes: blob.size,
+      userPrompt: currentContext.userPrompt || '',
+      pageTitle: currentContext.pageTitle || 'chatgpt-image'
     };
-    triggerImageAndMetadataDownload(blob, meta, meta.pageTitle || 'chatgpt-image', entry.mime);
+    triggerDownloads(blob, meta, meta.pageTitle, entry.mime);
   };
 
   filter.onerror = () => {
@@ -137,7 +145,7 @@ function attachFilter(details) {
   };
 }
 
-function markImageHeaders(details) {
+function markHeaders(details) {
   const ct = (details.responseHeaders || []).find((h) => h.name.toLowerCase() === 'content-type');
   if (!ct) return;
   const mime = ct.value.split(';')[0].trim().toLowerCase();
@@ -148,16 +156,16 @@ function markImageHeaders(details) {
 
 if (typeof browser !== 'undefined' && browser.webRequest) {
   browser.webRequest.onBeforeRequest.addListener(attachFilter, { urls: LISTEN_URLS }, ['blocking']);
-  browser.webRequest.onHeadersReceived.addListener(markImageHeaders, { urls: LISTEN_URLS }, ['responseHeaders']);
+  browser.webRequest.onHeadersReceived.addListener(markHeaders, { urls: LISTEN_URLS }, ['responseHeaders']);
 }
 
 if (typeof browser !== 'undefined' && browser.runtime) {
   browser.runtime.onMessage.addListener((msg) => {
     if (!msg) return;
     if (msg.type === 'INTERMEDIATE_FRAME_CAPTURED' && msg.data) {
-      handleFrameDownload(msg.data);
-    } else if (msg.type === 'IMAGE_METADATA_CAPTURED' || msg.type === 'IMAGE_DOM_DISCOVERED') {
-      latestMetadata = Object.assign({}, latestMetadata || {}, msg.data, {
+      handleStageFrame(msg.data);
+    } else if (msg.type === 'STREAM_METADATA_CHUNK' || msg.type === 'IMAGE_DOM_DISCOVERED') {
+      currentContext = Object.assign({}, currentContext, msg.data, {
         updatedAt: new Date().toISOString()
       });
     }

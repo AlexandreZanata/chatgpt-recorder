@@ -3,20 +3,18 @@
 (function() {
   'use strict';
 
-  const EVENT_NAME = '__CHATGPT_IMAGE_METADATA_EVENT__';
-  const FRAME_EVENT = '__CHATGPT_IMAGE_FRAME_EVENT__';
-  const capturedStages = new Set();
+  let stageCounter = 0;
+  let activeGenerationInterval = null;
+  const capturedFinalUrls = new Set();
+  const api = typeof browser !== 'undefined' ? browser : chrome;
 
   function injectScript() {
     try {
       const script = document.createElement('script');
-      const api = typeof browser !== 'undefined' ? browser : chrome;
       script.src = api.runtime.getURL('src/page-injector.js');
       (document.head || document.documentElement).appendChild(script);
       script.onload = () => script.remove();
-    } catch (e) {
-      console.warn('[ImageExtractor] Script injection failed:', e);
-    }
+    } catch (_) {}
   }
 
   function getConversationTitle() {
@@ -25,94 +23,99 @@
     return title.replace(/ChatGPT\s*[-–—|]?\s*/gi, '').trim() || 'chatgpt-image';
   }
 
-  function setupCustomListeners() {
-    const api = typeof browser !== 'undefined' ? browser : chrome;
-    window.addEventListener(EVENT_NAME, (evt) => {
-      if (!evt.detail) return;
-      try {
-        const payload = JSON.parse(evt.detail);
-        payload.pageTitle = getConversationTitle();
-        payload.url = window.location.href;
-        api.runtime.sendMessage({ type: 'IMAGE_METADATA_CAPTURED', data: payload }).catch(() => {});
-      } catch (err) {
-        console.warn('[ImageExtractor] Parse event error:', err);
+  function getLatestUserPrompt() {
+    const userMessages = document.querySelectorAll('[data-message-author-role="user"]');
+    if (userMessages.length > 0) {
+      return userMessages[userMessages.length - 1].innerText.trim();
+    }
+    return '';
+  }
+
+  function captureContainerStage(targetElement) {
+    if (!targetElement) return;
+    try {
+      const canvas = targetElement.tagName === 'CANVAS' ? targetElement : targetElement.querySelector('canvas');
+      if (canvas && canvas.width >= 64) {
+        stageCounter += 1;
+        api.runtime.sendMessage({
+          type: 'INTERMEDIATE_FRAME_CAPTURED',
+          data: {
+            stageIndex: stageCounter,
+            dataUrl: canvas.toDataURL('image/png'),
+            pageTitle: getConversationTitle(),
+            userPrompt: getLatestUserPrompt(),
+            timestamp: new Date().toISOString()
+          }
+        }).catch(() => {});
       }
-    });
-
-    window.addEventListener(FRAME_EVENT, (evt) => {
-      if (!evt.detail) return;
-      try {
-        const frameData = JSON.parse(evt.detail);
-        frameData.pageTitle = getConversationTitle();
-        api.runtime.sendMessage({ type: 'INTERMEDIATE_FRAME_CAPTURED', data: frameData }).catch(() => {});
-      } catch (_) {}
-    });
+    } catch (_) {}
   }
 
-  function isTargetImageSrc(src) {
-    return src.includes('oaiusercontent.com') || src.includes('dalle') || src.startsWith('blob:');
+  function startStageCapture() {
+    if (activeGenerationInterval) return;
+    stageCounter = 0;
+    activeGenerationInterval = setInterval(() => {
+      const candidates = document.querySelectorAll('canvas, [data-testid*="image"], .group\\/image');
+      for (const el of candidates) captureContainerStage(el);
+    }, 800);
   }
 
-  function processImage(img) {
+  function stopStageCapture() {
+    if (activeGenerationInterval) {
+      clearInterval(activeGenerationInterval);
+      activeGenerationInterval = null;
+    }
+  }
+
+  function handlePageMessage(evt) {
+    if (!evt.data || evt.data.source !== 'CHATGPT_IMAGE_EXTRACTOR_INJECTOR') return;
+    const { type, payload } = evt.data;
+    if (type === 'CONVERSATION_STREAM_CHUNK') {
+      startStageCapture();
+      payload.pageTitle = getConversationTitle();
+      payload.userPrompt = getLatestUserPrompt();
+      api.runtime.sendMessage({ type: 'STREAM_METADATA_CHUNK', data: payload }).catch(() => {});
+    }
+  }
+
+  function processFinalImage(img) {
     const src = img.src || img.getAttribute('src') || '';
-    if (!isTargetImageSrc(src) || capturedStages.has(src)) return;
-    capturedStages.add(src);
+    if (!src.includes('oaiusercontent.com') && !src.includes('estuary') && !src.includes('dalle')) return;
+    if (capturedFinalUrls.has(src)) return;
+    capturedFinalUrls.add(src);
+    stopStageCapture();
 
-    const alt = img.alt || img.getAttribute('alt') || '';
-    const isBlob = src.startsWith('blob:');
-    const api = typeof browser !== 'undefined' ? browser : chrome;
     api.runtime.sendMessage({
-      type: isBlob ? 'INTERMEDIATE_STAGE_DISCOVERED' : 'IMAGE_DOM_DISCOVERED',
+      type: 'IMAGE_DOM_DISCOVERED',
       data: {
         src,
-        alt,
-        isIntermediate: isBlob,
+        alt: img.alt || img.getAttribute('alt') || '',
         pageTitle: getConversationTitle(),
+        userPrompt: getLatestUserPrompt(),
         timestamp: new Date().toISOString()
       }
     }).catch(() => {});
   }
 
-  function handleAddedNode(node) {
-    if (node.nodeType !== Node.ELEMENT_NODE) return;
-    if (node.tagName === 'IMG') {
-      processImage(node);
-      return;
-    }
-    const imgs = node.querySelectorAll('img');
-    for (const img of imgs) {
-      processImage(img);
-    }
-  }
-
-  function observeDOMImages() {
+  function observeDOM() {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
         for (const node of m.addedNodes) {
-          handleAddedNode(node);
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          if (node.tagName === 'IMG') processFinalImage(node);
+          const imgs = node.querySelectorAll ? node.querySelectorAll('img') : [];
+          for (const img of imgs) processFinalImage(img);
         }
       }
     });
-
-    observer.observe(document.body || document.documentElement, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  if (typeof browser !== 'undefined' && browser.runtime) {
-    browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-      if (msg && msg.type === 'EXTRACT_PAGE_INFO') {
-        sendResponse({ title: getConversationTitle(), url: window.location.href });
-      }
-    });
+    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
   }
 
   injectScript();
-  setupCustomListeners();
+  window.addEventListener('message', handlePageMessage);
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', observeDOMImages);
+    document.addEventListener('DOMContentLoaded', observeDOM);
   } else {
-    observeDOMImages();
+    observeDOM();
   }
 })();
