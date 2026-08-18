@@ -69,5 +69,5 @@
 
   hookFetch();
   hookWebSocket();
-  console.log('[ImageExtractor] Page injector active for stream and metadata extraction.');
+  console.log('[ImageExtractor] Page injector active for image and metadata capture.');
 })();

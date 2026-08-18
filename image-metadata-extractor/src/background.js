@@ -22,7 +22,7 @@ const ICONS = {
 
 let sessionImageCount = 0;
 const pendingImages = new Map();
-let currentContext = { stages: [] };
+let currentContext = {};
 
 function sanitize(str) {
   return (str || 'image').toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 50);
@@ -52,21 +52,6 @@ function formatBaseName(tmpl, prefix, title) {
     .replace(/\{date\}/g, d)
     .replace(/\{time\}/g, t)
     .replace(/\{title\}/g, cleanTitle);
-}
-
-function dataUrlToBlob(dataUrl) {
-  try {
-    const parts = dataUrl.split(',');
-    const byteString = atob(parts[1]);
-    const mime = parts[0].split(':')[1].split(';')[0];
-    const u8arr = new Uint8Array(byteString.length);
-    for (let i = 0; i < byteString.length; i++) {
-      u8arr[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([u8arr], { type: mime });
-  } catch (_) {
-    return null;
-  }
 }
 
 function downloadFile(url, filename) {
@@ -105,24 +90,6 @@ function triggerDownloads(imageBlob, metadataObj, title, mimeType) {
       downloadFile(URL.createObjectURL(metaBlob), `${folder}${base}_metadata.json`);
     }
     setTimeout(() => updateIcon('idle'), 3000);
-  });
-}
-
-function handleStageFrame(frame) {
-  if (typeof browser === 'undefined' || !browser.downloads || !frame.dataUrl) return;
-  browser.storage.local.get({
-    autoDownloadFrames: true,
-    filenamePrefix: 'chatgpt-img',
-    subfolder: 'chatgpt-images'
-  }).then((s) => {
-    if (!s.autoDownloadFrames) return;
-    const blob = dataUrlToBlob(frame.dataUrl);
-    if (!blob) return;
-    const folder = s.subfolder ? `${s.subfolder.replace(/\/$/, '')}/stages/` : 'stages/';
-    const base = formatBaseName('{prefix}_{date}_{time}_{title}', s.filenamePrefix, frame.pageTitle || 'stage');
-    const filename = `${folder}${base}_stage_${frame.stageIndex}.png`;
-    currentContext.stages.push(filename);
-    downloadFile(URL.createObjectURL(blob), filename);
   });
 }
 
@@ -181,9 +148,7 @@ if (typeof browser !== 'undefined' && browser.webRequest) {
 if (typeof browser !== 'undefined' && browser.runtime) {
   browser.runtime.onMessage.addListener((msg) => {
     if (!msg) return;
-    if (msg.type === 'INTERMEDIATE_FRAME_CAPTURED' && msg.data) {
-      handleStageFrame(msg.data);
-    } else if (msg.type === 'STREAM_METADATA_CHUNK' || msg.type === 'IMAGE_DOM_DISCOVERED') {
+    if (msg.type === 'STREAM_METADATA_CHUNK' || msg.type === 'IMAGE_DOM_DISCOVERED') {
       currentContext = Object.assign({}, currentContext, msg.data, {
         updatedAt: new Date().toISOString()
       });
