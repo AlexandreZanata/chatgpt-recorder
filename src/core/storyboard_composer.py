@@ -18,23 +18,19 @@ def render_scene_clip(
 ) -> str:
     """Render a single image into an animated Ken Burns video clip with NVENC GPU acceleration."""
     vf = build_ken_burns_filter(motion_type, duration_sec, fps, width, height)
-    # Fast GPU NVENC command with software fallback
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1",
-        "-t", str(duration_sec),
+        "-framerate", str(fps),
         "-i", image_path,
         "-vf", vf,
         "-c:v", "h264_nvenc",
         "-preset", "p4",
         "-pix_fmt", "yuv420p",
-        "-r", str(fps),
         output_clip_path
     ]
     try:
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
-        # Fallback to libx264 if NVENC is unavailable
         cmd[cmd.index("h264_nvenc")] = "libx264"
         cmd.pop(cmd.index("-preset") + 1)
         cmd.remove("-preset")
@@ -85,7 +81,6 @@ def concatenate_scenes_with_audio(
     try:
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
-        # Fallback to libx264
         cmd[cmd.index("h264_nvenc")] = "libx264"
         cmd.pop(cmd.index("-preset") + 1)
         cmd.remove("-preset")
