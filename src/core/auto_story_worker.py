@@ -1,6 +1,7 @@
 """Background Worker Thread for Auto AI Story Video Production."""
 
 from pathlib import Path
+import subprocess
 import time
 from typing import Dict, List, Optional
 from PySide6.QtCore import QThread, Signal
@@ -38,7 +39,7 @@ class AutoStoryWorker(QThread):
             temp_dir = self.out_path.parent / f"tmp_scenes_{int(time.time())}"
             temp_dir.mkdir(parents=True, exist_ok=True)
 
-            self.progress.emit(10, "Transcrevendo áudio com Whisper (Timestamps palavra por palavra)...")
+            self.progress.emit(10, "Transcrevendo áudio com Whisper (Timestamps)...")
             segments = transcribe_audio_to_segments(str(self.narr_path))
             srt_file = None
             if self.has_subtitles and segments:
@@ -46,7 +47,7 @@ class AutoStoryWorker(QThread):
                 generate_srt_subtitles(segments, srt_file)
 
             total_dur = get_audio_duration(self.narr_path)
-            self.progress.emit(20, f"Planejando {int(total_dur // self.interval_sec) + 1} cenas com prompts individuais em inglês...")
+            self.progress.emit(20, f"Planejando {int(total_dur // self.interval_sec) + 1} cenas com prompts em inglês...")
             scenes = plan_scenes_from_duration(total_dur, float(self.interval_sec), self.theme, segments)
             if self.has_motion:
                 scenes = assign_random_motions(scenes)
@@ -61,9 +62,8 @@ class AutoStoryWorker(QThread):
 
                 scene_img = temp_dir / f"new_scene_{i+1}.png"
                 # Request fresh image via Lightning SDXL
-                ok = request_local_sdxl_image(scene["prompt"], str(scene_img), model_name=self.model_name, performance="Lightning", aspect_ratio=aspect)
+                request_local_sdxl_image(scene["prompt"], str(scene_img), model_name=self.model_name, performance="Lightning", aspect_ratio=aspect)
 
-                # If no direct API response, create fresh thematic gradient canvas
                 if not scene_img.exists():
                     self._create_scene_backdrop(scene_img, w, h, i)
 
@@ -82,8 +82,7 @@ class AutoStoryWorker(QThread):
             self.finished.emit(False, f"Erro na geração de vídeo: {err}")
 
     def _create_scene_backdrop(self, dest: Path, w: int, h: int, idx: int):
-        from PIL import Image, ImageDraw
-        colors = [(15, 23, 42), (30, 41, 59), (51, 65, 85), (71, 85, 105)]
-        bg = colors[idx % len(colors)]
-        img = Image.new("RGB", (w, h), color=bg)
-        img.save(dest)
+        colors = ["0x0f172a", "0x1e293b", "0x334155", "0x475569"]
+        color = colors[idx % len(colors)]
+        cmd = ["ffmpeg", "-y", "-f", "lavfi", "-i", f"color=c={color}:s={w}x{h}:d=1", "-frames:v", "1", str(dest)]
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
