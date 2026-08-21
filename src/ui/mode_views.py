@@ -16,7 +16,7 @@ def create_classic_fields(form: QFormLayout, parent_browse_cb, img_dir, aud_dir,
     w_img, in_img = create_file_row("Background Image:", "Image (*.png *.jpg *.webp)", img_dir, parent_browse_cb)
     w_narr, in_narr = create_file_row("Narration Audio:", filter_a, aud_dir, parent_browse_cb)
     w_bgm, in_bgm = create_file_row("Background Music:", filter_a, bgm_dir, parent_browse_cb)
-    w_ns, s_narr = create_slider_row("Narration Volume:", 0, 200, 150)
+    w_ns, s_narr = create_slider_row("Narration Volume:", 0, 200, 200)
     w_ms, s_music = create_slider_row("Music Volume:", 0, 50, 15)
 
     preset = QComboBox()
@@ -36,7 +36,7 @@ def create_auto_story_fields(form: QFormLayout, parent_browse_cb, aud_dir, bgm_d
     filter_a = "Audio (*.aac *.m4a *.mp3 *.wav *.ogg *.flac)"
     w_narr, in_narr = create_file_row("Narration Audio:", filter_a, aud_dir, parent_browse_cb)
     w_bgm, in_bgm = create_file_row("Background Music:", filter_a, bgm_dir, parent_browse_cb)
-    w_ns, s_narr = create_slider_row("Narration Volume:", 0, 200, 150)
+    w_ns, s_narr = create_slider_row("Narration Volume:", 0, 200, 200)
     w_ms, s_music = create_slider_row("Music Volume:", 0, 50, 15)
 
     preset = QComboBox()

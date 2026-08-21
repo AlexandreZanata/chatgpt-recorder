@@ -44,7 +44,7 @@ def concatenate_scenes_with_audio(
     audio_path: str,
     output_video_path: str,
     bgm_path: Optional[str] = None,
-    narr_vol: float = 1.5,
+    narr_vol: float = 2.0,
     bgm_vol: float = 0.15,
     subtitles_srt_path: Optional[str] = None
 ) -> str:
