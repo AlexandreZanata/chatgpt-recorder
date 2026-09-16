@@ -1,30 +1,108 @@
-"""Background Worker Thread for Auto AI Story Video Production."""
-
+from concurrent.futures import ThreadPoolExecutor
+import json
 from pathlib import Path
-import subprocess
+import shutil
 import time
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from PySide6.QtCore import QThread, Signal
 
-from src.core.ai_scene_planner import plan_scenes_from_duration
-from src.core.ai_transcriber import generate_srt_subtitles, transcribe_audio_to_segments
-from src.core.motion_renderer import assign_random_motions
-from src.core.sdxl_batch_generator import request_local_sdxl_image
-from src.core.storyboard_composer import concatenate_scenes_with_audio, render_scene_clip
+from src.core.ai_scene_planner import plan_adaptive_scenes
+from src.core.ai_transcriber import generate_srt_subtitles, slice_srt_for_window, transcribe_audio_to_segments
+from src.core.generation_profiles import GenerationProfile, get_generation_profile
+from src.core.motion_renderer import apply_motion_preference
+from src.core.sdxl_batch_generator import DirectSDXLGenerator
+from src.core.storyboard_composer import assemble_clips_to_video, render_scene_clip
 from src.engine.audio_mixer import get_audio_duration
 
 
+def _pipeline_scenes(
+    scenes: List[Dict[str, Any]],
+    bible: Dict[str, str],
+    segments: List[Dict[str, Any]],
+    temp_dir: Path,
+    dims: tuple,
+    has_subtitles: bool,
+    prog_cb: Callable[[int, str], None],
+    generation_profile: GenerationProfile,
+    model_name: Optional[str] = None
+) -> List[Path]:
+    """Execute overlapped diffusion generation and background NVENC clip rendering."""
+    inf_w, inf_h, out_w, out_h = dims
+    total = len(scenes)
+    clips_dir = temp_dir / "clips"
+    clips_dir.mkdir(parents=True, exist_ok=True)
+
+    chk_dir = Path.home() / "PESSOAL-PROJETOS-ALEXANDRE" / "Fooocus" / "models" / "checkpoints"
+    chk_p = str(chk_dir / model_name) if model_name and (chk_dir / model_name).exists() else None
+    generator = DirectSDXLGenerator(checkpoint_path=chk_p, profile=generation_profile)
+    prompts = [sc["prompt"] for sc in scenes]
+    neg_p = bible.get("negative_prompt", "")
+    generator.load_pipeline(prompts=prompts, negative_prompt=neg_p)
+    clip_paths: List[Optional[Path]] = [None] * total
+
+    with ThreadPoolExecutor(max_workers=2) as nvenc_pool:
+        futures = []
+        for idx, sc in enumerate(scenes):
+            img_p = temp_dir / f"scene_{idx+1}.webp"
+            clip_p = clips_dir / f"clip_{idx+1}.mp4"
+            sc["image_path"] = str(img_p)
+
+            generator.generate_scene_image(
+                prompt=sc["prompt"], negative_prompt=neg_p, out_path=img_p,
+                width=inf_w, height=inf_h, steps=generation_profile.steps,
+                seed=sc.get("seed", 42 + idx), scene_idx=idx
+            )
+            pct = 25 + int(((idx + 1) / total) * 35)
+            prog_cb(pct, f"Cena {idx+1}/{total} visual gerada ({generation_profile.status_label})...")
+
+            sub_file = None
+            if has_subtitles and segments:
+                sc_srt = temp_dir / f"sub_{idx+1}.srt"
+                sub_file = slice_srt_for_window(segments, sc["start_sec"], sc["end_sec"], str(sc_srt))
+
+            m_type = sc.get("motion_type", "zoom_in_center")
+            fut = nvenc_pool.submit(
+                render_scene_clip, str(img_p), sc["duration_sec"], str(clip_p),
+                m_type, out_w, out_h, 30, sub_file
+            )
+            futures.append((idx, fut, clip_p))
+
+        generator.unload()
+        prog_cb(62, "Todas as imagens concluídas. Finalizando clips animados (NVENC)...")
+
+        for idx, fut, p in futures:
+            fut.result()
+            clip_paths[idx] = p
+            pct = 62 + int(((idx + 1) / total) * 28)
+            prog_cb(pct, f"Clip {idx+1}/{total} animado e legendado (NVENC)...")
+
+    return [c for c in clip_paths if c is not None]
+
+
 class AutoStoryWorker(QThread):
-    """Background rendering pipeline for automated AI story videos."""
+    """Memory-bounded, ultra-high-throughput rendering worker for automated AI story videos."""
 
     progress = Signal(int, str)
     finished = Signal(bool, str)
 
-    def __init__(self, narr_path: Path, bgm_path: Optional[Path], out_path: Path, interval_sec: int, theme: str, model_name: str, has_subtitles: bool, has_motion: bool, preset: str, narr_vol: float, bgm_vol: float):
+    def __init__(
+        self,
+        narr_path: Path,
+        bgm_path: Optional[Path],
+        out_path: Path,
+        interval_sec: int,
+        theme: str,
+        model_name: str,
+        has_subtitles: bool,
+        has_motion: bool,
+        preset: str,
+        narr_vol: float,
+        bgm_vol: float
+    ):
         super().__init__()
-        self.narr_path = narr_path
-        self.bgm_path = bgm_path
-        self.out_path = out_path
+        self.narr_path = Path(narr_path).resolve()
+        self.bgm_path = Path(bgm_path).resolve() if bgm_path else None
+        self.out_path = Path(out_path).resolve()
         self.interval_sec = interval_sec
         self.theme = theme
         self.model_name = model_name
@@ -35,54 +113,60 @@ class AutoStoryWorker(QThread):
         self.bgm_vol = bgm_vol
 
     def run(self):
-        try:
-            temp_dir = self.out_path.parent / f"tmp_scenes_{int(time.time())}"
-            temp_dir.mkdir(parents=True, exist_ok=True)
+        """Execute the four-stage ultra-fast pipelined video production."""
+        temp_dir = self.out_path.parent / f"tmp_scenes_{int(time.time())}"
+        temp_dir.mkdir(parents=True, exist_ok=True)
 
-            self.progress.emit(10, "Transcrevendo áudio com Whisper (Timestamps)...")
+        try:
+            is_short = self.preset != "YouTube Standard (16:9)"
+            generation_profile = get_generation_profile(self.theme, is_short)
+            out_size = (1080, 1920) if is_short else (1920, 1080)
+            dims = (*generation_profile.inference_size, *out_size)
+
+            self.progress.emit(10, "Fase 1/4: Transcrevendo com Whisper Turbo (GPU)...")
             segments = transcribe_audio_to_segments(str(self.narr_path))
+
             srt_file = None
             if self.has_subtitles and segments:
                 srt_file = str(temp_dir / "subtitles.srt")
                 generate_srt_subtitles(segments, srt_file)
 
             total_dur = get_audio_duration(self.narr_path)
-            self.progress.emit(20, f"Planejando {int(total_dur // self.interval_sec) + 1} cenas com prompts em inglês...")
-            scenes = plan_scenes_from_duration(total_dur, float(self.interval_sec), self.theme, segments)
-            if self.has_motion:
-                scenes = assign_random_motions(scenes)
+            self.progress.emit(20, "Fase 2/4: Planejando cenas semânticas e Visual Bible...")
+            manifest = plan_adaptive_scenes(
+                total_dur, segments, theme=self.theme, is_short=is_short, interval_sec=float(self.interval_sec)
+            )
+            manifest["scenes"] = apply_motion_preference(
+                manifest["scenes"], enabled=self.has_motion
+            )
 
-            aspect = "896*1152" if self.preset != "YouTube Standard (16:9)" else "1152*896"
-            w, h = (1080, 1920) if self.preset != "YouTube Standard (16:9)" else (1920, 1080)
+            (temp_dir / "story_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
-            clip_paths = []
-            for i, scene in enumerate(scenes):
-                pct = int(25 + (i / max(1, len(scenes))) * 60)
-                self.progress.emit(pct, f"Gerando imagem da cena {i+1}/{len(scenes)} (Lightning): '{scene['excerpt'][:40]}...'")
+            self.progress.emit(25, f"Fase 3/4: Gerando com {generation_profile.status_label}...")
+            clip_paths = _pipeline_scenes(
+                manifest["scenes"], manifest["visual_bible"], segments, temp_dir,
+                dims, self.has_subtitles, lambda p, m: self.progress.emit(p, f"Fase 3/4: {m}"),
+                generation_profile,
+                model_name=self.model_name
+            )
 
-                scene_img = temp_dir / f"new_scene_{i+1}.png"
-                # Request fresh image via Lightning SDXL
-                request_local_sdxl_image(scene["prompt"], str(scene_img), model_name=self.model_name, performance="Lightning", aspect_ratio=aspect)
-
-                if not scene_img.exists():
-                    self._create_scene_backdrop(scene_img, w, h, i)
-
-                clip_out = str(temp_dir / f"clip_{i+1}.mp4")
-                m_type = scene.get("motion_type", "zoom_in") if self.has_motion else "zoom_in"
-                render_scene_clip(str(scene_img), scene["duration_sec"], clip_out, motion_type=m_type, width=w, height=h)
-                clip_paths.append(clip_out)
-
-            self.progress.emit(90, "Concatenando vídeo com áudio, música e legendas sincronizadas...")
+            self.progress.emit(92, "Fase 4/4: Montando áudio e vídeo final (Stream-Copy NVENC)...")
             bgm_str = str(self.bgm_path) if self.bgm_path and self.bgm_path.exists() else None
-            concatenate_scenes_with_audio(clip_paths, str(self.narr_path), str(self.out_path), bgm_path=bgm_str, narr_vol=self.narr_vol, bgm_vol=self.bgm_vol, subtitles_srt_path=srt_file)
+
+            assemble_clips_to_video(
+                clip_paths=clip_paths,
+                audio_path=str(self.narr_path),
+                output_video_path=str(self.out_path),
+                bgm_path=bgm_str,
+                narr_vol=self.narr_vol,
+                bgm_vol=self.bgm_vol,
+                subtitles_srt_path=srt_file,
+                subtitles_preburned=self.has_subtitles
+            )
 
             self.progress.emit(100, "Vídeo com IA gerado com sucesso!")
             self.finished.emit(True, f"Vídeo salvo em: {self.out_path}")
         except Exception as err:
             self.finished.emit(False, f"Erro na geração de vídeo: {err}")
-
-    def _create_scene_backdrop(self, dest: Path, w: int, h: int, idx: int):
-        colors = ["0x0f172a", "0x1e293b", "0x334155", "0x475569"]
-        color = colors[idx % len(colors)]
-        cmd = ["ffmpeg", "-y", "-f", "lavfi", "-i", f"color=c={color}:s={w}x{h}:d=1", "-frames:v", "1", str(dest)]
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)

@@ -22,8 +22,8 @@ class AutoStoryVideoWindow(tk.Toplevel):
 
         self.audio_path_var = tk.StringVar()
         self.format_var = tk.StringVar(value="YouTube Standard (16:9)")
-        self.interval_var = tk.IntVar(value=60)
-        self.theme_var = tk.StringVar(value="Cinematic Miami Luxury, 8k resolution, photorealistic")
+        self.interval_var = tk.IntVar(value=30)
+        self.theme_var = tk.StringVar(value="deep black")
         self.model_var = tk.StringVar()
         self.subtitles_var = tk.BooleanVar(value=True)
 

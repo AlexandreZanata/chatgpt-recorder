@@ -89,6 +89,7 @@ class VideoGeneratorApp(QMainWindow):
         self.btn_render.setStyleSheet("background-color: #6366f1; color: white; font-weight: bold; padding: 10px;")
         self.btn_render.clicked.connect(self.start_rendering)
         layout.addWidget(self.btn_render)
+        self.mode_combo.setCurrentIndex(1)
 
     def _build_classic_widget(self):
         w = QWidget()
@@ -149,19 +150,38 @@ class VideoGeneratorApp(QMainWindow):
         if not output:
             return
 
+        if self.mode_combo.currentIndex() == 1:
+            narr = Path(self.s_fields["in_narr"].text().strip())
+            if not narr.is_file():
+                self.status_label.setText("Erro: Selecione um áudio de narração válido!")
+                return
+            has_s_bgm = not self.s_fields["no_bgm"].isChecked() and bool(self.s_fields["in_bgm"].text().strip())
+            s_bgm = Path(self.s_fields["in_bgm"].text().strip()) if has_s_bgm else None
+            t_w = self.s_fields["theme"]
+            theme_val = t_w.currentText() if hasattr(t_w, "currentText") else t_w.text()
+            self.worker = AutoStoryWorker(
+                narr, s_bgm, Path(output), self.s_fields["interval"].value(),
+                theme_val, self.s_fields["model"].currentText(),
+                self.s_fields["subtitles"].isChecked(), self.s_fields["motion"].isChecked(),
+                self.s_fields["preset"].currentText(), self.s_fields["s_narr"].value() / 100.0,
+                self.s_fields["s_music"].value() / 100.0
+            )
+        else:
+            img = Path(self.c_fields["in_img"].text().strip())
+            narr = Path(self.c_fields["in_narr"].text().strip())
+            if not img.is_file() or not narr.is_file():
+                self.status_label.setText("Erro: Selecione uma imagem e um áudio válidos!")
+                return
+            has_bgm = not self.no_bgm_cb.isChecked() and bool(self.c_fields["in_bgm"].text().strip())
+            bgm = Path(self.c_fields["in_bgm"].text().strip()) if has_bgm else None
+            self.worker = RenderWorker(
+                img, narr, bgm, Path(output), self.c_fields["s_narr"].value() / 100.0,
+                self.c_fields["s_music"].value() / 100.0, self.c_fields["preset"].currentText(),
+                quick_outro=self.quick_outro_cb.isChecked()
+            )
+
         self.btn_render.setEnabled(False)
         self.progress_bar.setValue(5)
-        if self.mode_combo.currentIndex() == 1:
-            narr = Path(self.s_fields["in_narr"].text())
-            bgm = Path(self.s_fields["in_bgm"].text()) if self.s_fields["in_bgm"].text() else None
-            self.worker = AutoStoryWorker(narr, bgm, Path(output), self.s_fields["interval"].value(), self.s_fields["theme"].text(), self.s_fields["model"].currentText(), self.s_fields["subtitles"].isChecked(), self.s_fields["motion"].isChecked(), self.s_fields["preset"].currentText(), self.s_fields["s_narr"].value() / 100.0, self.s_fields["s_music"].value() / 100.0)
-        else:
-            img = Path(self.c_fields["in_img"].text())
-            narr = Path(self.c_fields["in_narr"].text())
-            has_bgm = not self.no_bgm_cb.isChecked() and bool(self.c_fields["in_bgm"].text())
-            bgm = Path(self.c_fields["in_bgm"].text()) if has_bgm else None
-            self.worker = RenderWorker(img, narr, bgm, Path(output), self.c_fields["s_narr"].value() / 100.0, self.c_fields["s_music"].value() / 100.0, self.c_fields["preset"].currentText(), quick_outro=self.quick_outro_cb.isChecked())
-
         self.worker.progress.connect(lambda val, msg: (self.progress_bar.setValue(val), self.status_label.setText(msg)))
         self.worker.finished.connect(lambda ok, msg: (self.btn_render.setEnabled(True), self.status_label.setText(msg)))
         self.worker.start()

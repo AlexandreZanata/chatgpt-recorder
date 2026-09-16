@@ -1,0 +1,114 @@
+{
+  "target_gpu": "NVIDIA GeForce RTX 4060 Laptop (8GB)",
+  "metrics": {
+    "asr_results": [
+      {
+        "model": "small",
+        "compute_type": "float16",
+        "vad": true,
+        "audio_dur_sec": 56.62,
+        "load_time_sec": 1.05,
+        "inf_time_sec": 1.33,
+        "rtf": 0.0234,
+        "vram_peak_mb": 0.0,
+        "ram_peak_mb": 502.3,
+        "detected_lang": "pt",
+        "lang_prob": 1.0,
+        "segments_count": 15,
+        "sample_text": "um drone sobrevou \u00e0 lavoura capturando centenas de imagens."
+      },
+      {
+        "model": "large-v3-turbo",
+        "compute_type": "float16",
+        "vad": true,
+        "audio_dur_sec": 56.62,
+        "load_time_sec": 4.7,
+        "inf_time_sec": 1.41,
+        "rtf": 0.0249,
+        "vram_peak_mb": 0.0,
+        "ram_peak_mb": 19.4,
+        "detected_lang": "pt",
+        "lang_prob": 1.0,
+        "segments_count": 14,
+        "sample_text": "Um drone sobrevoa a lavoura, capturando centenas de imagens."
+      },
+      {
+        "model": "large-v3-turbo",
+        "compute_type": "int8_float16",
+        "vad": true,
+        "audio_dur_sec": 56.62,
+        "load_time_sec": 3.05,
+        "inf_time_sec": 1.19,
+        "rtf": 0.0211,
+        "vram_peak_mb": 0.0,
+        "ram_peak_mb": 1151.9,
+        "detected_lang": "pt",
+        "lang_prob": 1.0,
+        "segments_count": 14,
+        "sample_text": "Um drone sobrevoa a lavoura, capturando centenas de imagens."
+      },
+      {
+        "model": "large-v3-turbo",
+        "compute_type": "float16",
+        "vad": false,
+        "audio_dur_sec": 56.62,
+        "load_time_sec": 2.28,
+        "inf_time_sec": 1.35,
+        "rtf": 0.0239,
+        "vram_peak_mb": 0.0,
+        "ram_peak_mb": 46.6,
+        "detected_lang": "pt",
+        "lang_prob": 1.0,
+        "segments_count": 14,
+        "sample_text": "Um drone sobrevoa a lavoura, capturando centenas de imagens."
+      }
+    ],
+    "diffusion_results": [
+      {
+        "resolution": "768x432",
+        "steps": 4,
+        "cold_time_sec": 1.49,
+        "warm_time_sec": 1.22,
+        "throughput_imgs_min": 49.3,
+        "vram_peak_mb": 7432.0,
+        "model_name": "RealVisXL_V5.0_fp16.safetensors",
+        "pipeline_load_sec": 3.02
+      },
+      {
+        "resolution": "896x504",
+        "steps": 4,
+        "cold_time_sec": 1.97,
+        "warm_time_sec": 1.61,
+        "throughput_imgs_min": 37.3,
+        "vram_peak_mb": 7544.1,
+        "model_name": "RealVisXL_V5.0_fp16.safetensors",
+        "pipeline_load_sec": 3.02
+      },
+      {
+        "resolution": "1024x576",
+        "steps": 4,
+        "cold_time_sec": 3.0,
+        "warm_time_sec": 2.2,
+        "throughput_imgs_min": 27.3,
+        "vram_peak_mb": 7525.9,
+        "model_name": "RealVisXL_V5.0_fp16.safetensors",
+        "pipeline_load_sec": 3.02
+      }
+    ],
+    "ffmpeg_legacy": {
+      "method": "legacy_multi_clip",
+      "total_time_sec": 5.76,
+      "processes_spawned": 6,
+      "temp_files_created": 6,
+      "video_duration_sec": 30.0
+    },
+    "ffmpeg_single_pass": {
+      "method": "single_pass_nvenc",
+      "total_time_sec": 0.56,
+      "processes_spawned": 1,
+      "temp_files_created": 1,
+      "video_duration_sec": 30.0
+    },
+    "speedup_factor": 10.29
+  }
+}
