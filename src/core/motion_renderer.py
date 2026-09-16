@@ -10,9 +10,10 @@ MOTION_PATTERNS = [
     "tilt_up",
     "tilt_down",
     "zoom_in",
-    "zoom_out",
 ]
+_SUPPORTED_MOTIONS = {*MOTION_PATTERNS, "zoom_out"}
 _MOTION_ALIASES = {"zoom_in_center": "zoom_in", "zoom_out_center": "zoom_out"}
+_MOTION_OVERSAMPLE = 2.0
 
 
 def _even(value: float) -> int:
@@ -39,12 +40,13 @@ def _pan_filter(
 ) -> str:
     """Build an eased pan on an aspect-ratio-safe overscan canvas."""
     zoom = 1.12
-    base = _base_filter(width, height, zoom)
+    base = _base_filter(width, height, _MOTION_OVERSAMPLE)
     inverse = f"(1-{progress})"
     phase = progress if motion_type in {"pan_right", "tilt_down"} else inverse
-    centered_x, centered_y = "(iw-iw/zoom)/2", "(ih-ih/zoom)/2"
-    x = f"(iw-iw/zoom)*{phase}" if motion_type.startswith("pan_") else centered_x
-    y = f"(ih-ih/zoom)*{phase}" if motion_type.startswith("tilt_") else centered_y
+    centered_x = "floor((iw-iw/zoom)/2)"
+    centered_y = "floor((ih-ih/zoom)/2)"
+    x = f"floor((iw-iw/zoom)*{phase})" if motion_type.startswith("pan_") else centered_x
+    y = f"floor((ih-ih/zoom)*{phase})" if motion_type.startswith("tilt_") else centered_y
     return (
         f"{base},zoompan=z='{zoom:.2f}':x='{x}':y='{y}':"
         f"d={total_frames}:s={width}x{height}:fps={fps}"
@@ -68,8 +70,8 @@ def _zoom_filter(
     else:
         zoom = f"{start:.4f}+{span:.4f}*{progress}"
     return (
-        f"{_base_filter(width, height)},zoompan=z='{zoom}':"
-        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+        f"{_base_filter(width, height, _MOTION_OVERSAMPLE)},zoompan=z='{zoom}':"
+        f"x='floor((iw-iw/zoom)/2)':y='floor((ih-ih/zoom)/2)':"
         f"d={total_frames}:s={width}x{height}:fps={fps}"
     )
 
@@ -94,7 +96,7 @@ def build_ken_burns_filter(
         )
     if normalized in {"pan_right", "pan_left", "tilt_up", "tilt_down"}:
         return _pan_filter(normalized, progress, width, height, total_frames, fps)
-    safe_motion = normalized if normalized in MOTION_PATTERNS else "zoom_in"
+    safe_motion = normalized if normalized in _SUPPORTED_MOTIONS else "zoom_in"
     return _zoom_filter(safe_motion, progress, duration_sec, width, height, total_frames, fps)
 
 

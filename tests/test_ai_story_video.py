@@ -6,8 +6,14 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from src.core.ai_transcriber import format_timestamp_srt
-from src.core.ai_scene_planner import plan_scenes_from_duration, clean_narrative_excerpt
+from src.core.ai_scene_planner import (
+    build_visual_bible,
+    clean_narrative_excerpt,
+    plan_adaptive_scenes,
+    plan_scenes_from_duration,
+)
 from src.core.generation_profiles import get_generation_profile
+from src.core.religion_visuals import build_religion_landscape_prompt
 from src.core.motion_renderer import (
     apply_motion_preference,
     assign_random_motions,
@@ -63,6 +69,17 @@ class TestAIStoryVideoPipeline(unittest.TestCase):
         result = build_ken_burns_filter("zoom_in", 30.0)
         self.assertIn("3-2*", result)
         self.assertIn("0.1600", result)
+
+    def test_given_centered_zoom_when_rendering_then_coordinates_do_not_vibrate(self):
+        """Contract: zoom uses oversampling and monotonic pixel rounding to prevent jitter."""
+        result = build_ken_burns_filter("zoom_in", 30.0)
+        self.assertIn("scale=3840:2160", result)
+        self.assertIn("floor((iw-iw/zoom)/2)", result)
+
+    def test_given_story_scenes_when_assigning_motion_then_no_random_pull_back(self):
+        """Contract: default camera direction never reverses into a random zoom-out."""
+        scenes = assign_random_motions([{"id": index} for index in range(30)])
+        self.assertNotIn("zoom_out", [scene["motion_type"] for scene in scenes])
 
     def test_given_scene_when_rendering_then_transition_fades_both_edges(self):
         """Contract: scene boundaries transition inline without a second render pass."""
@@ -135,15 +152,19 @@ class TestAIStoryVideoPipeline(unittest.TestCase):
         self.assertIn("golden", b_rel["lighting"])
         self.assertIn("amber", b_rel["color_palette"])
         self.assertIn("crowd", b_rel["negative_prompt"])
+        self.assertIn("visible face", b_rel["negative_prompt"])
+        self.assertIn("visible hands", b_rel["negative_prompt"])
+        self.assertLessEqual(len(b_rel["negative_prompt"].split()), 35)
         self.assertEqual(get_model_for_theme("religião primium word"), "RealVisXL_V5.0_fp16.safetensors")
 
-    def test_given_religion_theme_when_selecting_profile_then_use_measured_quality_path(self):
-        """Contract: religion alone uses the measured premium DPM++ configuration."""
+    def test_given_religion_theme_when_selecting_profile_then_use_balanced_fast_path(self):
+        """Contract: religion uses the measured 1024 Lightning path for 1080p output."""
         profile = get_generation_profile("religião primium word", is_short=False)
-        self.assertEqual(profile.sampler, "dpmpp_2m_karras")
-        self.assertEqual((profile.steps, profile.guidance_scale), (12, 4.5))
-        self.assertEqual(profile.inference_size, (1216, 704))
-        self.assertFalse(profile.use_lightning)
+        self.assertEqual(profile.sampler, "euler_trailing_lightning")
+        self.assertEqual((profile.steps, profile.guidance_scale), (4, 0.0))
+        self.assertEqual(profile.inference_size, (1024, 576))
+        self.assertEqual(get_generation_profile("religião primium word", True).inference_size, (576, 1024))
+        self.assertTrue(profile.use_lightning)
 
     def test_given_other_theme_when_selecting_profile_then_preserve_fast_visual_style(self):
         """Contract: other themes gain resolution while retaining the fast sampler."""
@@ -151,6 +172,28 @@ class TestAIStoryVideoPipeline(unittest.TestCase):
         self.assertEqual((profile.steps, profile.guidance_scale), (4, 0.0))
         self.assertEqual(profile.inference_size, (704, 1216))
         self.assertTrue(profile.use_lightning)
+
+    def test_given_human_religious_narrative_then_prompt_contains_only_landscape_symbols(self):
+        """Contract: religious narration never injects people or body parts into image prompts."""
+        bible = build_visual_bible("religião primium word")
+        prompt = build_religion_landscape_prompt(
+            "Jesus curou Bartimeu enquanto pessoas oravam com as mãos levantadas.", bible, 1
+        ).lower()
+        forbidden = ("jesus", "bartimeu", "pessoas", "mãos", "person", "face", "hand", "figure", "pray")
+        self.assertFalse(any(term in prompt for term in forbidden))
+        self.assertIn("clear spring", prompt)
+        self.assertIn("landscape", prompt)
+        self.assertIn("uninhabited", prompt)
+        self.assertLessEqual(len(prompt.split()), 35)
+
+    def test_given_religious_scene_plan_then_raw_human_narrative_is_not_forwarded(self):
+        """Contract: the scene planner isolates religion image prompts from raw narration."""
+        segments = [{"start": 0.0, "end": 30.0, "text": "Jesus called Bartimaeus and raised his hands."}]
+        manifest = plan_adaptive_scenes(30.0, segments, "religião primium word", interval_sec=30.0)
+        prompt = manifest["scenes"][0]["prompt"].lower()
+        self.assertNotIn("jesus", prompt)
+        self.assertNotIn("bartimaeus", prompt)
+        self.assertNotIn("hands", prompt)
 
 
 if __name__ == "__main__":

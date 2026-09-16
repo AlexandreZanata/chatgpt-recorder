@@ -37,13 +37,14 @@ def get_generation_profile(theme: str, is_short: bool) -> GenerationProfile:
     landscape_size = (1216, 704)
     inference_size = portrait_size if is_short else landscape_size
     if "religi" in _normalized_theme(theme):
+        religion_size = (576, 1024) if is_short else (1024, 576)
         return GenerationProfile(
-            name="religion_premium",
-            sampler="dpmpp_2m_karras",
-            steps=12,
-            guidance_scale=4.5,
-            inference_size=inference_size,
-            use_lightning=False,
+            name="religion_balanced_fast",
+            sampler="euler_trailing_lightning",
+            steps=4,
+            guidance_scale=0.0,
+            inference_size=religion_size,
+            use_lightning=True,
         )
     return GenerationProfile(
         name="high_resolution_fast",

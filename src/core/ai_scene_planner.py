@@ -8,13 +8,11 @@ import urllib.parse
 import urllib.request
 
 from src.core.motion_renderer import assign_random_motions
+from src.core.religion_visuals import build_scene_prompt
 
 _DISCOURSE_MARKERS = {
     "mas", "porem", "porém", "contudo", "entretanto", "no entanto", "however", "meanwhile", "therefore", "furthermore", "suddenly", "next"
 }
-_HUMAN_KW = ("homem", "mulher", "pessoa", "orac", "oraç", "rez", "samarit", "jesus", "cristo", "man", "woman", "person", "prayer", "pray")
-
-
 _THEME_BIBLES = {
     "deep black": {
         "master_theme": "deep black",
@@ -37,7 +35,8 @@ _THEME_BIBLES = {
         "camera_lens": "ARRI Alexa 35 film still, anamorphic 35mm lens, layered foreground midground and horizon, restrained composition",
         "lighting": "natural golden sunrise, atmospheric volumetric sunbeams, soft highlight rolloff, realistic warm divine glow",
         "color_palette": "warm amber and golden tones, muted teal shadows, rich natural earth, tranquil sky, subtle fine film grain",
-        "negative_prompt": "crowd, deformed hands, extra fingers, mutated limbs, duplicate person, cross-eyed, artificial halo, kitsch, fantasy spectacle, messy clutter, cartoon, 3d render, cgi, illustration, plastic skin, oversaturated, overprocessed, text, watermark, blurry",
+        "prompt_style": "ARRI Alexa, anamorphic 35mm, golden sunrise, volumetric light, amber-teal film grade",
+        "negative_prompt": "people, person, man, woman, child, human figure, silhouette, portrait, close-up, visible face, eyes, arms, visible hands, fingers, body, crowd, deformed anatomy, extra limbs, artificial halo, kitsch, fantasy, cartoon, CGI, illustration, plastic, oversaturated, text, watermark, blurry",
         "prefix": "reverent cinematic landscape photography, sacred natural grandeur, quiet contemplative atmosphere,"
     }
 }
@@ -159,13 +158,9 @@ def _create_scene_entry(scene_idx: int, start: float, end: float, text: str, bib
     """Format single scene entry with deterministic seed and translated English prompt."""
     dur = max(1.0, round(end - start, 2))
     clean_text = re.sub(r"\s+", " ", text).strip()
-    en_desc = translate_to_english_prompt(clean_text)
-
-    prefix = bible.get("prefix", f"{bible.get('master_theme', 'Cinematic')}. Cinematic photography of")
-    if "religi" in bible.get("master_theme", "").lower() and any(k in clean_text.lower() for k in _HUMAN_KW):
-        prefix = "reverent cinematic film still, solitary figure in quiet prayer within vast sacred nature, understated human scale,"
-
-    prompt = f"{prefix} {en_desc}. {bible['camera_lens']}, {bible['lighting']}, {bible['color_palette']}"
+    is_religion = "religi" in bible.get("master_theme", "").lower()
+    en_desc = "" if is_religion else translate_to_english_prompt(clean_text)
+    prompt = build_scene_prompt(clean_text, en_desc, bible, scene_idx)
     seed = int(hashlib.sha256(f"{clean_text}_{scene_idx}".encode()).hexdigest()[:8], 16) % (2**31 - 1)
 
     return {
