@@ -2,7 +2,6 @@
 
 import sys
 from pathlib import Path
-from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout,
     QLabel, QMainWindow, QProgressBar, QPushButton, QStackedWidget,
@@ -10,9 +9,10 @@ from PySide6.QtWidgets import (
 )
 
 from src.core.auto_story_worker import AutoStoryWorker
-from src.engine.audio_mixer import get_audio_duration
-from src.engine.video_composer import render_single_pass_video
+from src.core.standard_video_worker import RenderWorker
+from src.engine.standard_backgrounds import resolve_standard_background
 from src.ui.mode_views import create_classic_fields, create_auto_story_fields
+from src.ui.standard_controls import selected_standard_theme
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 IMAGENS_DIR = PROJECT_ROOT / "imagens"
@@ -22,39 +22,12 @@ VIDEO_DIR = PROJECT_ROOT / "video"
 AUDIO_EXTS = [".aac", ".m4a", ".mp3", ".wav", ".ogg", ".flac"]
 
 
-class RenderWorker(QThread):
-    progress = Signal(int, str)
-    finished = Signal(bool, str)
-
-    def __init__(self, img: Path, narr: Path, bgm: Path | None, out: Path, n_vol: float, m_vol: float, preset: str, quick_outro: bool = False):
-        super().__init__()
-        self.img, self.narr, self.bgm, self.out = img, narr, bgm, out
-        self.n_vol, self.m_vol, self.preset, self.quick_outro = n_vol, m_vol, preset, quick_outro
-
-    def run(self):
-        try:
-            total_dur = get_audio_duration(self.narr)
-            outro = 0.0 if self.preset != "YouTube Standard (16:9)" else (5.0 if self.quick_outro else 30.0)
-            render_dur = total_dur + outro if total_dur > 0 else 0.0
-            self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {render_dur:.1f}s)...")
-
-            def on_progress(pct_val: float, sec_val: float):
-                self.progress.emit(int(pct_val), f"Single-Pass GPU Encoding ({sec_val:.1f}s / {render_dur:.1f}s)...")
-
-            w, h = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
-            ok = render_single_pass_video(self.img, self.narr, self.bgm, None, self.out, narr_vol=self.n_vol, bgm_vol=self.m_vol, width=w, height=h, progress_callback=on_progress, total_duration=render_dur)
-            self.progress.emit(100, "Rendering complete!")
-            self.finished.emit(ok, f"Video rendered at {self.out}" if ok else "GPU rendering failed.")
-        except Exception as err:
-            self.finished.emit(False, str(err))
-
-
 class VideoGeneratorApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
         self.setObjectName("ChatGPTVideoStudio")
-        self.resize(700, 620)
+        self.resize(760, 780)
         for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR, VIDEO_DIR):
             d.mkdir(exist_ok=True)
         self.init_ui()
@@ -144,6 +117,28 @@ class VideoGeneratorApp(QMainWindow):
             n += 1
         return str(VIDEO_DIR / f"{n}.mp4")
 
+    def _make_standard_worker(self, output):
+        img = Path(self.c_fields["in_img"].text().strip())
+        narr = Path(self.c_fields["in_narr"].text().strip())
+        theme = selected_standard_theme(self.c_fields)
+        try:
+            portrait = self.c_fields["preset"].currentText() == "YouTube Shorts / Reels (9:16)"
+            background, _ = resolve_standard_background(img, theme, portrait=portrait)
+        except (ValueError, FileNotFoundError) as err:
+            self.status_label.setText(str(err))
+            return None
+        if not background.is_file() or not narr.is_file():
+            self.status_label.setText("Select valid narration and a background image or particle theme.")
+            return None
+        has_bgm = not self.no_bgm_cb.isChecked() and bool(self.c_fields["in_bgm"].text().strip())
+        bgm = Path(self.c_fields["in_bgm"].text().strip()) if has_bgm else None
+        return RenderWorker(
+            img, narr, bgm, Path(output), self.c_fields["s_narr"].value() / 100.0,
+            self.c_fields["s_music"].value() / 100.0, self.c_fields["preset"].currentText(),
+            quick_outro=self.quick_outro_cb.isChecked(),
+            has_subtitles=self.c_fields["subtitles"].isChecked(), background_theme=theme,
+        )
+
     def start_rendering(self):
         out_def = self._get_next_out()
         output, _ = QFileDialog.getSaveFileName(self, "Save Video", out_def, "MP4 Video (*.mp4)")
@@ -167,18 +162,9 @@ class VideoGeneratorApp(QMainWindow):
                 self.s_fields["s_music"].value() / 100.0
             )
         else:
-            img = Path(self.c_fields["in_img"].text().strip())
-            narr = Path(self.c_fields["in_narr"].text().strip())
-            if not img.is_file() or not narr.is_file():
-                self.status_label.setText("Erro: Selecione uma imagem e um áudio válidos!")
+            self.worker = self._make_standard_worker(output)
+            if self.worker is None:
                 return
-            has_bgm = not self.no_bgm_cb.isChecked() and bool(self.c_fields["in_bgm"].text().strip())
-            bgm = Path(self.c_fields["in_bgm"].text().strip()) if has_bgm else None
-            self.worker = RenderWorker(
-                img, narr, bgm, Path(output), self.c_fields["s_narr"].value() / 100.0,
-                self.c_fields["s_music"].value() / 100.0, self.c_fields["preset"].currentText(),
-                quick_outro=self.quick_outro_cb.isChecked()
-            )
 
         self.btn_render.setEnabled(False)
         self.progress_bar.setValue(5)

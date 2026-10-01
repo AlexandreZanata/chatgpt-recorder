@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from src.core.sdxl_batch_generator import get_available_checkpoints, get_model_for_theme
+from src.ui.standard_controls import create_standard_controls
 
 
 def create_classic_fields(form: QFormLayout, parent_browse_cb, img_dir, aud_dir, bgm_dir):
@@ -21,13 +22,15 @@ def create_classic_fields(form: QFormLayout, parent_browse_cb, img_dir, aud_dir,
 
     preset = QComboBox()
     preset.addItems(["YouTube Standard (16:9)", "YouTube Shorts / Reels (9:16)"])
+    subtitles, backgrounds, checks = create_standard_controls(w_img)
 
     return {
-        "rows": [("Background Image:", w_img), ("Narration Audio:", w_narr),
+        "rows": [("Background Image:", w_img), ("Particle Background:", backgrounds), ("Narration Audio:", w_narr),
                  ("Background Music:", w_bgm), ("Narration Volume:", w_ns),
-                 ("Music Volume:", w_ms), ("Video Preset:", preset)],
+                 ("Music Volume:", w_ms), ("Video Preset:", preset), ("", subtitles)],
         "in_img": in_img, "in_narr": in_narr, "in_bgm": in_bgm,
-        "s_narr": s_narr, "s_music": s_music, "preset": preset
+        "s_narr": s_narr, "s_music": s_music, "preset": preset,
+        "subtitles": subtitles, "background_checks": checks,
     }
 
 

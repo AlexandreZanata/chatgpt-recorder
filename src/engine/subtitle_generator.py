@@ -21,19 +21,25 @@ def generate_ass_content(
     font_size: int = 24,
     primary_color: str = "&H00FFFFFF",
     outline_color: str = "&H00000000",
+    width: int = 1920,
+    height: int = 1080,
+    alignment: int = 2,
+    outline_width: float = 2,
+    margin_horizontal: int = 20,
 ) -> str:
     """Build ASS subtitle file content from segment timestamps."""
     header = (
         "[Script Info]\n"
         "ScriptType: v4.00+\n"
-        "PlayResX: 1920\n"
-        "PlayResY: 1080\n\n"
+        f"PlayResX: {width}\n"
+        f"PlayResY: {height}\n\n"
         "[V4+ Styles]\n"
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
         "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
         "BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
         f"Style: Default,{font_name},{font_size},{primary_color},&H000000FF,{outline_color},"
-        "&H80000000,1,0,0,0,100,100,0,0,1,2,1,2,20,20,40,1\n\n"
+        f"&H80000000,1,0,0,0,100,100,0,0,1,{outline_width},1,{alignment},"
+        f"{margin_horizontal},{margin_horizontal},40,1\n\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
@@ -53,8 +59,15 @@ def save_ass_subtitles(
     output_path: Path,
     font_name: str = "DejaVu Sans",
     font_size: int = 24,
+    width: int = 1920,
+    height: int = 1080,
+    alignment: int = 2,
+    outline_width: float = 2,
+    margin_horizontal: int = 20,
 ) -> Path:
     """Generate and write ASS subtitle file to disk."""
-    content = generate_ass_content(segments, font_name=font_name, font_size=font_size)
+    content = generate_ass_content(segments, font_name=font_name, font_size=font_size,
+                                   width=width, height=height, alignment=alignment,
+                                   outline_width=outline_width, margin_horizontal=margin_horizontal)
     output_path.write_text(content, encoding="utf-8")
     return output_path

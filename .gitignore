@@ -34,7 +34,12 @@ background-music/*
 video/*
 !video/.gitkeep
 *.mp4
+!assets/backgrounds/religious_particles.mp4
+!assets/backgrounds/enigmatic_black.mp4
+!assets/backgrounds/zaflas_agro.mp4
+!assets/backgrounds/fallem_prince.mp4
+!assets/backgrounds/religious_particles_shorts.mp4
+!assets/backgrounds/enigmatic_black_shorts.mp4
+!assets/backgrounds/zaflas_agro_shorts.mp4
+!assets/backgrounds/fallem_prince_shorts.mp4
 *.wav
-
-
-

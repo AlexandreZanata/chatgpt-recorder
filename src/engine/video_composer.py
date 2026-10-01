@@ -31,12 +31,21 @@ def build_single_pass_command(
     height: int = 1080,
     fps: int = 15,
     duration: float = 0.0,
+    background_is_video: bool = False,
 ) -> list[str]:
     """Construct stable single-pass FFmpeg NVENC command."""
     vf = f"scale=w={width}:h={height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
+    if background_is_video:
+        vf = f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1,format=yuv420p"
+    if subtitle_path is not None:
+        if not subtitle_path.is_file():
+            raise FileNotFoundError(f"Subtitle file not found: {subtitle_path}")
+        escaped = str(subtitle_path.resolve()).replace("\\", "\\\\").replace(":", "\\:").replace("'", "'\\\\''")
+        vf += f",subtitles=filename='{escaped}'"
+    loop = ["-stream_loop", "-1"] if background_is_video else ["-loop", "1"]
 
     cmd = [
-        "ffmpeg", "-y", "-thread_queue_size", "1024", "-loop", "1", "-i", str(image_path),
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-thread_queue_size", "1024", *loop, "-i", str(image_path),
         "-thread_queue_size", "1024", "-i", str(narr_path)
     ]
 
@@ -73,14 +82,16 @@ def render_single_pass_video(
     fps: int = 15,
     progress_callback=None,
     total_duration: float = 0.0,
+    background_is_video: bool = False,
 ) -> bool:
     """Execute stable single-pass GPU video render with error capture."""
     cmd = build_single_pass_command(
         image_path, narr_path, bgm_path, subtitle_path, output_path,
-        narr_vol, bgm_vol, width, height, fps, duration=total_duration
+        narr_vol, bgm_vol, width, height, fps, duration=total_duration,
+        background_is_video=background_is_video,
     )
     if progress_callback:
-        cmd.extend(["-progress", "pipe:1", "-nostats"])
+        cmd[-1:-1] = ["-progress", "pipe:1", "-nostats"]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for line in proc.stdout:
             sec = parse_out_time_sec(line.strip())
