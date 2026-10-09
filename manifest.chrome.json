@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Audio Capture",
+  "version": "0.1.0",
+  "description": "Automatically capture ChatGPT Read aloud audio and save it locally.",
+  "minimum_chrome_version": "116",
+  "permissions": ["downloads", "storage", "activeTab", "tabCapture", "offscreen"],
+  "host_permissions": ["https://chatgpt.com/*"],
+  "background": {
+    "service_worker": "src/chrome/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["src/chrome/content-script.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["src/chrome/audio-hooks.js", "src/chrome/page-injector.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "icons": {"32": "icons/icon-idle.png"},
+  "action": {
+    "default_icon": "icons/icon-idle.png",
+    "default_title": "ChatGPT Audio Capture",
+    "default_popup": "popup.html"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
+      },
+      "description": "Open ChatGPT Audio Capture Popup"
+    }
+  }
+}

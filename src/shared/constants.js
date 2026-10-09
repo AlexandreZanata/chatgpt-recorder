@@ -18,8 +18,12 @@ export const MIME_EXTENSION_MAP = {
   'audio/mpeg': '.mp3',
   'audio/mp3': '.mp3',
   'audio/wav': '.wav',
+  'audio/wave': '.wav',
+  'audio/x-wav': '.wav',
   'audio/ogg': '.ogg',
   'audio/aac': '.aac',
+  'audio/mp4': '.mp4',
+  'audio/x-m4a': '.m4a',
   'audio/webm': '.webm'
 };
 
