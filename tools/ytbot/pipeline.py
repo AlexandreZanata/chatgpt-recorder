@@ -23,7 +23,8 @@ def _sanitize_topic(topic: str) -> str:
 def _read_queued_topics() -> list[str]:
     if not config.TOPICS.is_file():
         return []
-    return [_sanitize_topic(line) for line in config.TOPICS.read_text(encoding="utf-8").splitlines() if line.strip()]
+    topics = [_sanitize_topic(line) for line in config.TOPICS.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [topic for topic in topics if not (logic.run_path(topic) / "upload.json").is_file()]
 
 
 def _add_new_topics(candidates: list[str], known: list[str], chosen: list[str], count: int) -> None:
@@ -35,8 +36,8 @@ def _add_new_topics(candidates: list[str], known: list[str], chosen: list[str], 
             return
 
 
-def prepare_topics(context, count: int) -> list[str]:
-    existing = [item.get("title", "") for item in logic.load_catalog()]
+def prepare_topics(context, count: int, scheduled_titles: list[str] | None = None) -> list[str]:
+    existing = [item.get("title", "") for item in logic.load_catalog()] + (scheduled_titles or [])
     chosen: list[str] = []
     _add_new_topics(_read_queued_topics(), existing, chosen, count)
     for _ in range(3):
@@ -159,7 +160,9 @@ def run_batch(count: int) -> list[str]:
         if not catalog_data:
             catalog_data = catalog.scrape_public_catalog(context)
         catalog.write_catalog_markdown(catalog_data)
-        topics = prepare_topics(context, count)
+        studio_payload = catalog.fetch_creator_videos(context)
+        scheduled_titles = [item.get("title", "") for item in catalog.studio_videos(studio_payload)]
+        topics = prepare_topics(context, count, scheduled_titles)
         log(f"topics: {topics}")
         for topic in topics:
             try:
@@ -175,8 +178,7 @@ def run_batch(count: int) -> list[str]:
     with sync_playwright() as playwright:
         upload_context = runtime.launch_upload_context(playwright)
         try:
-            payload = catalog.fetch_creator_videos(upload_context)
-            occupied = logic.scheduled_slots(payload)
+            occupied = logic.scheduled_slots(studio_payload)
             slots = logic.next_slots(len(topics), occupied)
             log(f"planned slots: {[logic.slot_label(slot) for slot in slots]}")
             for topic, slot in zip(topics, slots):
