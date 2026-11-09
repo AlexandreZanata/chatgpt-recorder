@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from src.engine.transcription_cache import cached_transcription
+
 _FOOOCUS_NVIDIA = Path.home() / "PESSOAL-PROJETOS-ALEXANDRE" / "Fooocus" / "venv" / "lib" / "python3.12" / "site-packages" / "nvidia"
 if _FOOOCUS_NVIDIA.exists():
     _cublas = str(_FOOOCUS_NVIDIA / "cublas" / "lib")
@@ -40,9 +42,18 @@ def format_timestamp_srt(seconds: float) -> str:
 def transcribe_audio_to_segments(
     audio_path: str,
     model_name: str = "large-v3-turbo",
-    language: Optional[str] = None,
+    language: Optional[str] = "en",
     word_timestamps: bool = False
 ) -> List[Dict[str, Any]]:
+    """Recognize English only; never automatically switch subtitle languages."""
+    if language not in (None, "en"):
+        raise ValueError("Subtitle recognition is locked to English (en).")
+    language = "en"
+    return cached_transcription(audio_path, model_name, language, word_timestamps,
+                                _transcribe_uncached)
+
+
+def _transcribe_uncached(audio_path, model_name, language, word_timestamps):
     """Transcribe audio file into timestamped segments using faster-whisper on GPU."""
     try:
         from faster_whisper import WhisperModel

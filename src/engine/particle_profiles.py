@@ -36,4 +36,10 @@ PARTICLE_PROFILES = {
         drift_x=(8, 26), travel_y=(0.35, 0.60),
         radii=(0.8, 0.8, 1.0, 1.4, 2.0, 2.8), count=90, crf=14,
     ),
+    "whispers_from_heaven": ParticleProfile(
+        plate="whispers_from_heaven_plate.png", color=(222, 183, 126),
+        portrait_plate="whispers_from_heaven_shorts_plate.png",
+        drift_x=(6, 20), travel_y=(0.25, 0.45),
+        radii=(0.8, 0.8, 1.0, 1.2, 1.6, 2.2), count=110, crf=14,
+    ),
 }

@@ -24,6 +24,65 @@ session + TOTP, optional PAdES. Agent Harness + Lefthook quality gates.
 **Current phase:** see `.local/README.md` (gitignored). Do not tag `v2.0.0` while
 OPEN-ITEMS blockers remain.
 
+---
+
+## YouTube automation bot (`tools/ytbot`)
+
+Local, hidden pipeline for the **fallem prince** channel. It generates the article
+in the Simple Deep Dive GPT, captures Read aloud audio, generates metadata and the
+Black Ink Void thumbnail, renders the video (Fallem Prince background, no music,
+quick outro, subtitles), uploads a draft, adds the Subscribe + Best for viewer end
+screen and **schedules** it. It never publishes immediately and never opens
+windows in the main desktop workspace.
+
+**Single command**
+
+```bash
+python3 -m tools.ytbot run --count N
+```
+
+Rules enforced by code:
+
+- 2 videos/day at **00:00** and **12:00**, 12 hours apart.
+- If one slot is already scheduled that day, use the missing slot; if both are
+  taken, move to the next day. Existing slots come from YouTube Studio
+  `list_creator_videos`; start at least 60 minutes in the future.
+- Always **"not made for kids"**.
+- Description follows the existing channel format: paragraphs, hashtags, then the
+  `TAGS:` line. Tags also go in the tags field, comma separated and within the
+  YouTube character budget.
+- Never add em dash (`—`) or en dash (`–`) to topics, titles, descriptions, tags
+  or article text.
+- End screen always includes **Inscrever-se** and a Video element set to
+  **Melhor para o espectador** (YouTube chooses the best video).
+- Every stage is recorded in `.local/ytbot/records/records.jsonl`,
+  `.local/ytbot/records/RECORDS.md` and `.local/ytbot/runs/<slug>/record.json`.
+
+Runtime and data:
+
+- Hidden Chrome runs on Xvfb `:99`, CDP port `9300`, using the already signed-in
+  profile at `.local/bot/profile` (gitignored). Do not touch the normal Chrome
+  profile.
+- `python3 -m tools.ytbot setup` prepares/uses the profile.
+- Topic queue: `.local/ytbot/topics.txt`. If it has fewer topics than `--count`,
+  the bot asks ChatGPT for new topics and filters them against the catalog.
+- Catalog: `.local/ytbot/catalog.json` (refresh with
+  `python3 -m tools.ytbot catalog`); duplicate check:
+  `python3 -m tools.ytbot check "topic"`.
+- Full process map: `tools/ytbot/README.md`.
+
+Agent workflow for **"faça N vídeos e poste"**:
+
+1. Run the command detached:
+   `setsid python3 -m tools.ytbot run --count N > /tmp/ytbot-run.log 2>&1 < /dev/null &`
+2. Poll the log and `.local/ytbot/records/records.jsonl`.
+3. Intervene only if the process exits non-zero or a stage is recorded as
+   `error`. Completed stages are resumable.
+4. Report the final summary and scheduled slots. Do not publish manually.
+
+Verification: `python3 -m unittest tests.test_ytbot_logic` and the size/complexity
+gate on the new files.
+
 When rules conflict with existing code, **rules prevail** — unless the user explicitly overrides for a task.
 
 ---

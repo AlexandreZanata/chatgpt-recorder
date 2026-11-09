@@ -2,27 +2,41 @@
 
 import re
 import subprocess
+import math
+import wave
 from pathlib import Path
 
 
 def get_audio_duration(audio_path: Path) -> float:
-    """Extract exact real audio duration in seconds using fast stream demuxing."""
-    cmd = ["ffmpeg", "-y", "-i", str(audio_path), "-c", "copy", "-f", "null", "-"]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    times = re.findall(r"time=(\d+):(\d+):(\d+\.\d+)", res.stderr)
-    if times:
-        h, m, s = times[-1]
-        return float(h) * 3600 + float(m) * 60 + float(s)
-
+    """Use exact PCM frame counts or metadata before scanning every packet."""
+    try:
+        with wave.open(str(audio_path), "rb") as audio:
+            duration = audio.getnframes() / audio.getframerate()
+            if duration > 0:
+                return duration
+    except (OSError, EOFError, wave.Error):
+        pass
     cmd_probe = [
         "ffprobe", "-v", "error", "-show_entries", "format=duration",
         "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)
     ]
     try:
         res_p = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
-        return float(res_p.stdout.strip())
-    except (subprocess.SubprocessError, ValueError):
+        duration = float(res_p.stdout.strip())
+        if math.isfinite(duration) and duration > 0:
+            return duration
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    cmd = ["ffmpeg", "-i", str(audio_path), "-c", "copy", "-f", "null", "-"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        times = re.findall(r"time=(\d+):(\d+):(\d+\.\d+)", res.stderr)
+        if times:
+            h, m, s = times[-1]
+            return float(h) * 3600 + float(m) * 60 + float(s)
+    except (OSError, subprocess.SubprocessError):
         return 0.0
+    return 0.0
 
 
 def build_audio_mix_command(

@@ -1,0 +1,4 @@
+gere o artigo sobre o tema abaixo (mande apenas o texto limpo sem nenhuma mensagem adicional)
+remova os metadados "search, site...." tudo que não faz parte do texto para quando eu clicar em "read auloud" isso "nunca aparecer no audio de naração" (antes de colocar o output) *traga em texto limpo contendo apenas e unicamente o texto que vai ser dito no tts sem nada adciinal ou de metadado
+
+traga apenas o texto sem nenhuma mnesgaem adicionar de complemento como *vou buscar infromações.... nada fora do artigo)

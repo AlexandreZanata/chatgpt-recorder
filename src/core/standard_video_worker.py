@@ -6,6 +6,7 @@ from PySide6.QtCore import QThread, Signal
 
 from src.core.ai_transcriber import transcribe_audio_to_segments
 from src.engine.audio_mixer import get_audio_duration
+from src.engine.classic_parallel import parallel_workers, render_parallel_video
 from src.engine.standard_backgrounds import resolve_standard_background
 from src.engine.subtitle_generator import save_ass_subtitles
 from src.engine.video_composer import render_single_pass_video
@@ -46,14 +47,17 @@ class RenderWorker(QThread):
             w, h = (1920, 1080) if self.preset == "YouTube Standard (16:9)" else (1080, 1920)
             background, is_video = resolve_standard_background(self.img, self.background_theme,
                                                                 portrait=h > w)
+            parallel = parallel_workers(render_dur, is_video) > 1
+            encoding = "Parallel GPU Encoding (4 workers)" if parallel else "Single-Pass GPU Encoding"
 
             def on_progress(pct_val: float, sec_val: float):
-                self.progress.emit(int(pct_val), f"Single-Pass GPU Encoding ({sec_val:.1f}s / {render_dur:.1f}s)...")
+                self.progress.emit(int(pct_val), f"{encoding} ({sec_val:.1f}s / {render_dur:.1f}s)...")
 
             with TemporaryDirectory(prefix="standard-video-") as directory:
                 subtitle = self._subtitle_file(Path(directory), w, h)
-                self.progress.emit(5, f"Single-Pass GPU Encoding (0.0s / {render_dur:.1f}s)...")
-                ok = render_single_pass_video(
+                self.progress.emit(5, f"{encoding} (0.0s / {render_dur:.1f}s)...")
+                renderer = render_parallel_video if parallel else render_single_pass_video
+                ok = renderer(
                     background, self.narr, self.bgm, subtitle, self.out,
                     narr_vol=self.n_vol, bgm_vol=self.m_vol, width=w, height=h,
                     fps=30 if is_video else 15, progress_callback=on_progress,

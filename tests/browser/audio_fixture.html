@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Controlled Read aloud audio fixture</title>
+<h1>Controlled Read aloud audio fixture</h1>
+<p>This is synthetic audio for extension testing, not the ChatGPT service.</p>
+<button id="read">Read aloud</button>
+<output id="state">Ready</output>
+<script>
+document.querySelector('#read').onclick = async () => {
+  document.querySelector('#state').textContent = 'Playing';
+  const context = new AudioContext();
+  await context.resume();
+  const gain = context.createGain();
+  gain.gain.value = 0.2;
+  gain.connect(context.destination);
+  window.testAudioContext = context;
+  const start = context.currentTime + 0.15;
+  const passage = Number(new URL(location.href).searchParams.get('passage')) || 2;
+  for (const [offset, frequency] of [[0, 440], [passage + 1.8, 880]]) {
+    const oscillator = context.createOscillator();
+    oscillator.frequency.value = frequency;
+    oscillator.connect(gain);
+    oscillator.start(start + offset);
+    oscillator.stop(start + offset + passage);
+    if (frequency === 880) oscillator.onended = () => {
+      document.querySelector('#state').textContent = 'Finished';
+    };
+  }
+};
+</script>
+</html>

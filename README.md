@@ -33,6 +33,15 @@ A high-performance Firefox extension (Manifest V3) designed to automatically cap
 
 ## ⚙️ Build & Quality Verification
 
+### Google Chrome version
+
+Run `npm run build:chrome`, then open `chrome://extensions`, enable
+**Developer mode**, click **Load unpacked**, and select `dist/chrome`.
+Reload existing ChatGPT tabs before using Read aloud.
+The Chrome build preserves the popup/settings and uses Chrome-compatible
+audio capture. Firefox's manifest and response filter remain unchanged.
+See [the Chrome guide](docs/CHROME-EXTENSION.md) for details and limitations.
+
 To verify code quality and generate the production distribution archive:
 
 ```bash
@@ -47,6 +56,23 @@ The output package will be generated at `dist/chatgpt-audio-capture-v0.1.0.zip`.
 ---
 
 ## 📄 Technical Architecture
+
+### Desktop text-to-speech narration
+
+The video desktop app supports pasted narration text with the fixed Uncle_Fu voice,
+fixed English narration and recognition, short voice auditions, and full WAV generation
+in both video modes. Existing audio-file input remains available.
+Classic mode, text narration, and subtitles are enabled on launch. Long Classic
+exports use bounded four-worker rendering. The Base narrator builds one full acoustic
+prompt from the approved original Uncle_Fu sample and reuses it for every passage.
+Eligible 0.6B narration uses CUDA graphs and a fixed seed, without changing the voice
+reference or applying free-form delivery overrides. Subtitle/encoding quality settings
+are preserved; GPU fallbacks keep the same Base model and reference, never another preset.
+Run `bash scripts/setup-local-tts.sh` once to install the isolated speech engine,
+then restart the desktop app and use **Test voice** or **Generate full narration**.
+The first voice test downloads Base model weights; Qwen3-TTS Base 0.6B with Uncle_Fu is the
+user-selected default and the only selectable voice. The 1.7B model remains optional.
+See [local narration setup and limitations](docs/LOCAL-NARRATION.md).
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐

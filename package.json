@@ -7,7 +7,9 @@
     "verify": "bash scripts/check-quality.sh",
     "lint": "eslint src/ --max-warnings 0",
     "test": "bash scripts/run-tests.sh",
-    "build": "bash scripts/package-extension.sh"
+    "build": "bash scripts/package-extension.sh",
+    "build:chrome": "python3 scripts/build-chrome.py",
+    "test:chrome": "npm run build:chrome && python3 -u tests/browser/chrome_audio_e2e.py"
   },
   "devDependencies": {
     "eslint": "^9.0.0",

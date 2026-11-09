@@ -8,6 +8,9 @@ BACKGROUND_THEMES = {
     "black": ("Enigmatic black · white particles", "enigmatic_black.mp4"),
     "agro": ("Zaflas Agro · golden fields and pollen", "zaflas_agro.mp4"),
     "fallem_prince": ("fallem prince · monochrome engraving", "fallem_prince.mp4"),
+    "whispers_from_heaven": (
+        "Whispers From Heaven · brown stippling and particles", "whispers_from_heaven.mp4"
+    ),
 }
 PORTRAIT_BACKGROUND_FILES = {
     theme: f"{Path(filename).stem}_shorts.mp4"

@@ -8,7 +8,7 @@ import numpy as np
 from src.engine.particle_art import LOOP_SECONDS, ParticleLoop
 from src.engine.standard_backgrounds import resolve_standard_background
 
-THEMES = ("religious", "black", "agro", "fallem_prince")
+THEMES = ("religious", "black", "agro", "fallem_prince", "whispers_from_heaven")
 
 
 class TestParticleBackgrounds(unittest.TestCase):

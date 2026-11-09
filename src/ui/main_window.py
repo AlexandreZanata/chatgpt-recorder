@@ -2,17 +2,16 @@
 
 import sys
 from pathlib import Path
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout,
     QLabel, QMainWindow, QProgressBar, QPushButton, QStackedWidget,
-    QVBoxLayout, QWidget
+    QScrollArea, QVBoxLayout, QWidget
 )
 
-from src.core.auto_story_worker import AutoStoryWorker
-from src.core.standard_video_worker import RenderWorker
-from src.engine.standard_backgrounds import resolve_standard_background
 from src.ui.mode_views import create_classic_fields, create_auto_story_fields
-from src.ui.standard_controls import selected_standard_theme
+from src.ui.narration_panel import NarrationPanel
+from src.ui.main_window_actions import VideoGeneratorActions
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 IMAGENS_DIR = PROJECT_ROOT / "imagens"
@@ -22,7 +21,7 @@ VIDEO_DIR = PROJECT_ROOT / "video"
 AUDIO_EXTS = [".aac", ".m4a", ".mp3", ".wav", ".ogg", ".flac"]
 
 
-class VideoGeneratorApp(QMainWindow):
+class VideoGeneratorApp(VideoGeneratorActions, QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YouTube Video Automation Studio")
@@ -30,6 +29,7 @@ class VideoGeneratorApp(QMainWindow):
         self.resize(760, 780)
         for d in (IMAGENS_DIR, AUDIO_DIR, BGM_DIR, VIDEO_DIR):
             d.mkdir(exist_ok=True)
+        self.video_dir = VIDEO_DIR
         self.init_ui()
         self.auto_prefill_media()
 
@@ -46,23 +46,41 @@ class VideoGeneratorApp(QMainWindow):
         header_form.addRow("🎯 Modo de Produção:", self.mode_combo)
         layout.addLayout(header_form)
 
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        body = QWidget()
+        scroll.setWidget(body)
+        body_layout = QVBoxLayout(body)
+        layout.addWidget(scroll, 1)
+
+        self.narration = NarrationPanel(AUDIO_DIR)
+        self.narration.narrationReady.connect(self._use_generated_narration)
+        self.narration.busyChanged.connect(self._speech_busy)
+        body_layout.addWidget(self.narration)
+
         self.stack = QStackedWidget()
         self.w_classic, self.c_fields = self._build_classic_widget()
         self.w_story, self.s_fields = self._build_story_widget()
         self.stack.addWidget(self.w_classic)
         self.stack.addWidget(self.w_story)
-        layout.addWidget(self.stack)
+        body_layout.addWidget(self.stack)
 
         self.progress_bar = QProgressBar()
         layout.addWidget(self.progress_bar)
         self.status_label = QLabel("Status: Ready")
         layout.addWidget(self.status_label)
+        self._pulse_timer = QTimer(self)
+        self._pulse_timer.setInterval(450)
+        self._pulse_timer.timeout.connect(self._pulse_transcription)
+        self._pulse_tick = 0
+        self._last_progress = 0
+        self._transcribing = False
 
         self.btn_render = QPushButton("🚀 Generate Video (NVENC GPU)")
         self.btn_render.setStyleSheet("background-color: #6366f1; color: white; font-weight: bold; padding: 10px;")
         self.btn_render.clicked.connect(self.start_rendering)
         layout.addWidget(self.btn_render)
-        self.mode_combo.setCurrentIndex(1)
+        self.mode_combo.setCurrentIndex(0)
 
     def _build_classic_widget(self):
         w = QWidget()
@@ -111,66 +129,6 @@ class VideoGeneratorApp(QMainWindow):
         self.s_fields["in_narr"].setText(first_match(AUDIO_DIR, AUDIO_EXTS))
         self.s_fields["in_bgm"].setText(first_match(BGM_DIR, AUDIO_EXTS))
 
-    def _get_next_out(self):
-        n = 1
-        while (VIDEO_DIR / f"{n}.mp4").exists():
-            n += 1
-        return str(VIDEO_DIR / f"{n}.mp4")
-
-    def _make_standard_worker(self, output):
-        img = Path(self.c_fields["in_img"].text().strip())
-        narr = Path(self.c_fields["in_narr"].text().strip())
-        theme = selected_standard_theme(self.c_fields)
-        try:
-            portrait = self.c_fields["preset"].currentText() == "YouTube Shorts / Reels (9:16)"
-            background, _ = resolve_standard_background(img, theme, portrait=portrait)
-        except (ValueError, FileNotFoundError) as err:
-            self.status_label.setText(str(err))
-            return None
-        if not background.is_file() or not narr.is_file():
-            self.status_label.setText("Select valid narration and a background image or particle theme.")
-            return None
-        has_bgm = not self.no_bgm_cb.isChecked() and bool(self.c_fields["in_bgm"].text().strip())
-        bgm = Path(self.c_fields["in_bgm"].text().strip()) if has_bgm else None
-        return RenderWorker(
-            img, narr, bgm, Path(output), self.c_fields["s_narr"].value() / 100.0,
-            self.c_fields["s_music"].value() / 100.0, self.c_fields["preset"].currentText(),
-            quick_outro=self.quick_outro_cb.isChecked(),
-            has_subtitles=self.c_fields["subtitles"].isChecked(), background_theme=theme,
-        )
-
-    def start_rendering(self):
-        out_def = self._get_next_out()
-        output, _ = QFileDialog.getSaveFileName(self, "Save Video", out_def, "MP4 Video (*.mp4)")
-        if not output:
-            return
-
-        if self.mode_combo.currentIndex() == 1:
-            narr = Path(self.s_fields["in_narr"].text().strip())
-            if not narr.is_file():
-                self.status_label.setText("Erro: Selecione um áudio de narração válido!")
-                return
-            has_s_bgm = not self.s_fields["no_bgm"].isChecked() and bool(self.s_fields["in_bgm"].text().strip())
-            s_bgm = Path(self.s_fields["in_bgm"].text().strip()) if has_s_bgm else None
-            t_w = self.s_fields["theme"]
-            theme_val = t_w.currentText() if hasattr(t_w, "currentText") else t_w.text()
-            self.worker = AutoStoryWorker(
-                narr, s_bgm, Path(output), self.s_fields["interval"].value(),
-                theme_val, self.s_fields["model"].currentText(),
-                self.s_fields["subtitles"].isChecked(), self.s_fields["motion"].isChecked(),
-                self.s_fields["preset"].currentText(), self.s_fields["s_narr"].value() / 100.0,
-                self.s_fields["s_music"].value() / 100.0
-            )
-        else:
-            self.worker = self._make_standard_worker(output)
-            if self.worker is None:
-                return
-
-        self.btn_render.setEnabled(False)
-        self.progress_bar.setValue(5)
-        self.worker.progress.connect(lambda val, msg: (self.progress_bar.setValue(val), self.status_label.setText(msg)))
-        self.worker.finished.connect(lambda ok, msg: (self.btn_render.setEnabled(True), self.status_label.setText(msg)))
-        self.worker.start()
 
 
 def run_app():

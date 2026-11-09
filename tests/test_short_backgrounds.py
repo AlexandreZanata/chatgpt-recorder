@@ -19,6 +19,7 @@ THEMES = {
     "black": "enigmatic_black_shorts.mp4",
     "agro": "zaflas_agro_shorts.mp4",
     "fallem_prince": "fallem_prince_shorts.mp4",
+    "whispers_from_heaven": "whispers_from_heaven_shorts.mp4",
 }
 
 
