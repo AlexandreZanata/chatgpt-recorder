@@ -118,6 +118,13 @@ def format_pt_date(value: date) -> str:
     return f"{value.day} de {MONTHS[value.month]} de {value.year}"
 
 
+def slot_from_label(value: str, fallback):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d %H:%M")
+    except (TypeError, ValueError):
+        return fallback
+
+
 def slot_label(value: datetime) -> str:
     return value.strftime("%Y-%m-%d %H:%M")
 

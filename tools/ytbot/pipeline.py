@@ -127,9 +127,10 @@ def upload_stage(context, topic: str, slot) -> None:
         data = json.loads(upload_path.read_text(encoding="utf-8"))
         if not data.get("endScreen"):
             _finish_end_screen(context, run_dir, data)
-            logic.record_event(run_dir, "upload", "ok", "end screen finished")
-        else:
-            logic.record_event(run_dir, "upload", "skipped", "already uploaded")
+        if not data.get("scheduled"):
+            data = youtube.schedule_existing(context, run_dir, data, logic.slot_from_label(data.get("slot", ""), slot))
+        logic.set_run_field(run_dir, slot=data.get("slot", ""), video=data.get("url", ""))
+        logic.record_event(run_dir, "upload", "ok", data.get("url", "") + " at " + data.get("slot", ""))
         return
     meta = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
     result = youtube.upload_and_schedule_with_context(context, run_dir, meta, slot)

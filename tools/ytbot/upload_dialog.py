@@ -7,11 +7,41 @@ import json
 from . import logic
 
 
-def schedule_in_dialog(page, slot) -> None:
+def answer_audience(page) -> None:
+    radio = page.locator('tp-yt-paper-radio-button[name="VIDEO_MADE_FOR_KIDS_NOT_MFK"]')
+    if not radio.count():
+        return
+    for _ in range(3):
+        try:
+            radio.first.click(force=True)
+        except Exception:
+            pass
+        page.wait_for_timeout(700)
+        checked = page.evaluate(
+            "()=>document.querySelector('tp-yt-paper-radio-button[name=\"VIDEO_MADE_FOR_KIDS_NOT_MFK\"]')?.hasAttribute('checked')")
+        if checked:
+            return
+    raise RuntimeError("could not answer the audience question")
+
+
+def _show_visibility(page) -> None:
     page.evaluate("()=>{const b=document.querySelector('#step-badge-3'); if(b)b.click()}")
-    page.wait_for_timeout(3000)
-    page.evaluate("()=>{const b=document.querySelector('#second-container-expand-button'); if(b)b.click()}")
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(2500)
+    for _ in range(3):
+        if page.locator("#datepicker-trigger").is_visible():
+            return
+        button = page.locator("#next-button")
+        if button.count() and button.first.is_visible() and button.first.get_attribute("aria-disabled") != "true":
+            button.first.click()
+        page.wait_for_timeout(2500)
+
+
+def schedule_in_dialog(page, slot) -> None:
+    answer_audience(page)
+    _show_visibility(page)
+    if not page.locator("#datepicker-trigger").is_visible():
+        page.evaluate("()=>{const b=document.querySelector('#second-container-expand-button'); if(b)b.click()}")
+        page.wait_for_timeout(1500)
     page.evaluate("()=>{const b=document.querySelector('#datepicker-trigger'); if(b)b.click()}")
     page.wait_for_timeout(1200)
     date_input = page.locator("ytcp-date-picker input")
@@ -35,3 +65,21 @@ def schedule_in_dialog(page, slot) -> None:
     body = page.locator("body").inner_text().lower()
     if "programado" not in body and "scheduled" not in body:
         raise RuntimeError("YouTube did not confirm the schedule")
+
+
+def fill_editable(page, index: int, text: str) -> None:
+    page.evaluate("(i)=>{const e=document.querySelectorAll('#textbox')[i]; if(e)e.focus()}", index)
+    page.keyboard.press("Control+A")
+    page.keyboard.press("Backspace")
+    page.keyboard.insert_text(text)
+    page.wait_for_timeout(350)
+
+
+def ensure_title(page, title: str) -> None:
+    for _ in range(3):
+        current = page.evaluate("()=>document.querySelectorAll('#textbox')[0]?.innerText || ''")
+        if current.strip() == title.strip():
+            return
+        fill_editable(page, 0, title)
+        page.wait_for_timeout(800)
+    raise RuntimeError("YouTube overwrote the video title")
