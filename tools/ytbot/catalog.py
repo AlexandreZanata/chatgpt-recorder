@@ -93,3 +93,21 @@ def write_catalog_markdown(data: list[dict]) -> None:
         lines.append(f"| {item.get('duration', '?')} | {item.get('title', '')} |")
     config.DATA.mkdir(parents=True, exist_ok=True)
     (config.DATA / "catalog.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def is_scheduled(context, video_id: str) -> bool:
+    payload = fetch_creator_videos(context)
+    found = []
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("videoId") == video_id:
+                details = node.get("scheduledPublishingDetails") or {}
+                if details.get("scheduledPublishings"):
+                    found.append(True)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+    walk(payload)
+    return bool(found)

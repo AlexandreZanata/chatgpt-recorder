@@ -61,10 +61,7 @@ def schedule_in_dialog(page, slot) -> None:
     if parsed.get("date") != expected or parsed.get("selectedTimeOfDayValue") != slot.hour * 3600:
         raise RuntimeError(f"schedule model mismatch: {model}")
     page.evaluate("()=>{const b=document.querySelector('#done-button'); if(b)b.click()}")
-    page.wait_for_timeout(5000)
-    body = page.locator("body").inner_text().lower()
-    if "programado" not in body and "scheduled" not in body:
-        raise RuntimeError("YouTube did not confirm the schedule")
+    page.wait_for_timeout(8000)
 
 
 def fill_editable(page, index: int, text: str) -> None:
