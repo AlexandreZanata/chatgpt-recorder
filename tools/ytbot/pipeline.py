@@ -175,24 +175,19 @@ def run_batch(count: int) -> list[str]:
                 failures.append((topic, str(error)))
                 log(f"asset failure for {topic}: {error}")
 
-    runtime.stop_hidden_chrome()
     with sync_playwright() as playwright:
-        upload_context = runtime.launch_upload_context(playwright)
-        try:
-            occupied = logic.scheduled_slots(studio_payload)
-            slots = logic.next_slots(len(topics), occupied)
-            log(f"planned slots: {[logic.slot_label(slot) for slot in slots]}")
-            for topic, slot in zip(topics, slots):
-                try:
-                    upload_stage(upload_context, topic, slot)
-                except Exception as error:
-                    run_dir = logic.run_path(topic)
-                    logic.record_event(run_dir, "upload", "error", str(error))
-                    failures.append((topic, str(error)))
-                    log(f"upload failure for {topic}: {error}")
-        finally:
-            upload_context.close()
-    runtime.start_hidden_chrome()
+        browser, upload_context = runtime.connect_hidden(playwright)
+        occupied = logic.scheduled_slots(studio_payload)
+        slots = logic.next_slots(len(topics), occupied)
+        log(f"planned slots: {[logic.slot_label(slot) for slot in slots]}")
+        for topic, slot in zip(topics, slots):
+            try:
+                upload_stage(upload_context, topic, slot)
+            except Exception as error:
+                run_dir = logic.run_path(topic)
+                logic.record_event(run_dir, "upload", "error", str(error))
+                failures.append((topic, str(error)))
+                log(f"upload failure for {topic}: {error}")
     logic.write_records_markdown()
     _summary(topics)
     if failures:

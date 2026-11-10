@@ -71,6 +71,11 @@ Runtime and data:
   `python3 -m tools.ytbot check "topic"`.
 - Full process map: `tools/ytbot/README.md`.
 
+If an upload opens the Google account chooser, the bot profile session expired:
+sign in once in `.local/bot/profile`, or finish the uploads with the already
+signed-in main Chrome profile launched on Xvfb. Do not use the main profile while
+the normal Chrome is open.
+
 Agent workflow for **"faça N vídeos e poste"**:
 
 1. Run the command detached:

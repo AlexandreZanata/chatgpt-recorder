@@ -112,6 +112,12 @@ For every topic, the bot runs these stages and records each one:
 
 ## Notes
 
+- If an upload lands on the Google account chooser, the bot profile session
+  expired. Sign in once in `.local/bot/profile`, or finish the uploads with the
+  already signed-in main Chrome profile launched on Xvfb (the bot cannot use that
+  profile while the normal Chrome is open).
+- YouTube Studio data can lag a few seconds after scheduling; the bot confirms
+  the schedule from the edit page/upload dialog and retries.
 - The pipeline is sequential to keep the account and audio capture reliable.
   A 10-video batch can take several hours; run it detached and inspect the log.
 - The ChatGPT profile is separate from the normal Chrome. The main workspace is

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 from . import logic
 
@@ -39,6 +40,16 @@ def _show_visibility(page) -> None:
 def schedule_in_dialog(page, slot) -> None:
     answer_audience(page)
     _show_visibility(page)
+    deadline = time.time() + 1800
+    while time.time() < deadline:
+        body = page.locator("body").inner_text()
+        state = page.evaluate(
+            "()=>{const b=document.querySelector('#done-button'); return b?{text:(b.innerText||'').trim(),disabled:b.getAttribute('aria-disabled')}:null}")
+        if state and state.get("disabled") != "true" and ("Verificações concluídas" in body or "Checks complete" in body):
+            break
+        page.wait_for_timeout(5000)
+    else:
+        raise RuntimeError("video checks did not finish")
     if not page.locator("#datepicker-trigger").is_visible():
         page.evaluate("()=>{const b=document.querySelector('#second-container-expand-button'); if(b)b.click()}")
         page.wait_for_timeout(1500)
@@ -60,8 +71,18 @@ def schedule_in_dialog(page, slot) -> None:
     expected = {"year": slot.year, "month": slot.month - 1, "day": slot.day}
     if parsed.get("date") != expected or parsed.get("selectedTimeOfDayValue") != slot.hour * 3600:
         raise RuntimeError(f"schedule model mismatch: {model}")
+    deadline = time.time() + 1800
+    while time.time() < deadline:
+        state = page.evaluate(
+            "()=>{const b=document.querySelector('#done-button'); return b?{text:(b.innerText||'').trim(),disabled:b.getAttribute('aria-disabled')}:null}")
+        if state and state.get("disabled") != "true" and any(
+                word in state.get("text", "") for word in ("Programar", "Schedule", "Salvar", "Save")):
+            break
+        page.wait_for_timeout(5000)
+    else:
+        raise RuntimeError("schedule button did not become ready")
     page.evaluate("()=>{const b=document.querySelector('#done-button'); if(b)b.click()}")
-    page.wait_for_timeout(8000)
+    page.wait_for_timeout(10000)
 
 
 def fill_editable(page, index: int, text: str) -> None:
@@ -80,3 +101,24 @@ def ensure_title(page, title: str) -> None:
         fill_editable(page, 0, title)
         page.wait_for_timeout(800)
     raise RuntimeError("YouTube overwrote the video title")
+
+
+def set_file_input(page, path: str) -> None:
+    client = page.context.new_cdp_session(page)
+    client.send("DOM.enable")
+    expression = """(() => {
+      const found = [];
+      const walk = (root) => {
+        for (const el of root.querySelectorAll('*')) {
+          if (el.tagName === 'INPUT' && el.type === 'file' && el.name === 'Filedata') found.push(el);
+          if (el.shadowRoot) walk(el.shadowRoot);
+        }
+      };
+      walk(document);
+      return found.length ? found[found.length - 1] : null;
+    })()"""
+    result = client.send("Runtime.evaluate", {"expression": expression, "returnByValue": False})
+    object_id = result.get("result", {}).get("objectId")
+    if not object_id:
+        raise RuntimeError("upload file input not found")
+    client.send("DOM.setFileInputFiles", {"files": [path], "objectId": object_id})

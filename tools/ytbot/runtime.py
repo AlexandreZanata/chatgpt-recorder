@@ -178,7 +178,7 @@ def launch_upload_context(playwright):
         try:
             return playwright.chromium.launch_persistent_context(
                 str(config.PROFILE), executable_path="/usr/bin/google-chrome", headless=False,
-                args=["--no-first-run", "--no-default-browser-check", "--window-position=0,0", "--window-size=1600,1000"],
+                args=["--ozone-platform=x11", "--profile-directory=Default", "--no-first-run", "--no-default-browser-check", "--window-position=0,0", "--window-size=1600,1000"],
                 ignore_default_args=["--password-store=basic", "--use-mock-keychain"],
                 env=_chrome_env(), accept_downloads=True,
             )

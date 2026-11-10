@@ -50,10 +50,7 @@ def upload_video(context, run_dir: Path, meta: dict) -> str:
     upload_file = run_dir / f"upload-{run_dir.name}.mp4"
     upload_file.unlink(missing_ok=True)
     shutil.copy2(run_dir / "video.mp4", upload_file)
-    dialog_input = page.locator('ytcp-uploads-file-picker input[type=file]')
-    if dialog_input.count() == 0:
-        dialog_input = page.locator('input[type=file][name="Filedata"]')
-    dialog_input.last.set_input_files(str(upload_file))
+    upload_dialog.set_file_input(page, str(upload_file))
     page.wait_for_selector("#textbox", state="attached", timeout=120000)
     page.wait_for_timeout(4000)
     upload_dialog.fill_editable(page, 0, meta["title"])
