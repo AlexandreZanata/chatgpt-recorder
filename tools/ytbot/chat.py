@@ -103,11 +103,14 @@ def clean_article(text: str) -> str:
     return text.strip()
 
 
-def generate_article(page, topic: str, run_dir: Path) -> str:
+def generate_article(page, topic: str, run_dir: Path, extra_header: str = "") -> str:
     page.goto(config.GPT_URL, timeout=90000)
     page.wait_for_timeout(7000)
     dismiss_notice(page)
-    send_text(page, config.prompt("article_header.txt") + "\n\nTheme: " + topic)
+    header = config.prompt("article_header.txt")
+    if extra_header:
+        header += "\n\n" + extra_header
+    send_text(page, header + "\n\nTheme: " + topic)
     log(f"article prompt sent: {topic}")
     wait_for_assistant(page)
     text = clean_article(copy_last(page))
@@ -143,17 +146,17 @@ def _save_audio(entry, item, run_dir: Path) -> Path | None:
 
 
 def capture_audio(page, context, run_dir: Path, timeout: int = 3600) -> Path:
-    start = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-    clicked = page.evaluate(
-        "()=>{const b=[...document.querySelectorAll('button[aria-label=\"Read aloud\"]')];"
-        "if(!b.length)return 'none'; b[b.length-1].click(); return 'clicked'}"
-    )
-    log(f"read aloud: {clicked}")
-    if clicked == "none":
-        raise RuntimeError("Read aloud button was not available")
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        with AUDIO_LOCK:
+    with AUDIO_LOCK:
+        start = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+        clicked = page.evaluate(
+            "()=>{const b=[...document.querySelectorAll('button[aria-label=\"Read aloud\"]')];"
+            "if(!b.length)return 'none'; b[b.length-1].click(); return 'clicked'}"
+        )
+        log(f"read aloud: {clicked}")
+        if clicked == "none":
+            raise RuntimeError("Read aloud button was not available")
+        deadline = time.time() + timeout
+        while time.time() < deadline:
             page.wait_for_timeout(5000)
             found = _audio_entry(context, start)
             if not found:
@@ -164,7 +167,7 @@ def capture_audio(page, context, run_dir: Path, timeout: int = 3600) -> Path:
             if destination:
                 log(f"audio saved: {destination.name} ({destination.stat().st_size} bytes)")
                 return destination
-    raise TimeoutError("audio capture timed out")
+        raise TimeoutError("audio capture timed out")
 
 
 def generate_topics(context, count: int, existing: list[str]) -> list[str]:

@@ -69,6 +69,11 @@ Runtime and data:
 - Catalog: `.local/ytbot/catalog.json` (refresh with
   `python3 -m tools.ytbot catalog`); duplicate check:
   `python3 -m tools.ytbot check "topic"`.
+- Speed: article generation is sequential (concurrency 4 produced short
+  articles below 35 minutes); audio capture is serialized; metadata/thumbnail
+  run in parallel; rendering and uploads stay serialized. Use
+  `--parallel 4 --upload-cdp <port>` when the signed-in main profile is running
+  on Xvfb.
 - Full process map: `tools/ytbot/README.md`.
 
 If an upload opens the Google account chooser, the bot profile session expired:

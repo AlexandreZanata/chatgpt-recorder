@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from pathlib import Path
 
@@ -9,11 +10,19 @@ from . import config
 from .audio_tools import fit_narration
 
 
+RENDER_LOCK = threading.Lock()
+
+
 def log(message: str) -> None:
     print(f"[render] {message}", flush=True)
 
 
 def render_video(run_dir: Path) -> Path:
+    with RENDER_LOCK:
+        return _render_video(run_dir)
+
+
+def _render_video(run_dir: Path) -> Path:
     from src.core.ai_transcriber import transcribe_audio_to_segments
     from src.engine.audio_mixer import get_audio_duration
     from src.engine.classic_parallel import parallel_workers, render_parallel_video

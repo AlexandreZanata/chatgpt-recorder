@@ -110,6 +110,34 @@ For every topic, the bot runs these stages and records each one:
 - The bot is resumable: existing article/audio/metadata/thumbnail/video/upload
   files are reused, so a failed stage does not repeat completed work.
 
+## Speed experiment (4 videos)
+
+Concurrency 4 across article generation was tested and rejected: the four
+concurrent GPT tabs produced 26–31k character articles, below the channel's
+35-minute minimum, and risked quality loss.
+
+Final shape:
+
+- Article generation stays **sequential**, with a 40k-character guard. If the
+  first response is shorter, it retries with a 6,500-word target.
+- Audio capture is serialized; metadata and thumbnail generation run in
+  parallel (4).
+- Rendering is serialized by a process lock because transcription and NVENC
+  share the GPU.
+- Uploads and scheduling stay sequential.
+
+The four test articles were 50,893 / 49,384 / 43,161 / 47,628 characters,
+producing 51:08 / 60:47 / 46:11 / 39:52 videos, scheduled for 22–25 Nov 2026.
+The downstream parallel stage is the safe speed gain without losing length or
+render quality.
+
+When the main Chrome profile is the only one with a valid YouTube session,
+launch it on Xvfb with remote debugging and pass its port:
+
+```bash
+python3 -m tools.ytbot run --count 4 --parallel 4 --upload-cdp 9301
+```
+
 ## Notes
 
 - If an upload lands on the Google account chooser, the bot profile session
