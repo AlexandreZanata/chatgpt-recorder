@@ -48,11 +48,11 @@ def scrape_public_catalog(context) -> list[dict]:
 
 def fetch_creator_videos(context) -> dict:
     page = context.new_page()
-    payload: dict = {}
+    pages: list[dict] = []
     def on_response(response):
         if "list_creator_videos" in response.url:
             try:
-                payload.setdefault("data", response.json())
+                pages.append(response.json())
             except Exception:
                 pass
     page.on("response", on_response)
@@ -62,9 +62,18 @@ def fetch_creator_videos(context) -> dict:
         from . import runtime
         runtime.select_channel(page)
         page.wait_for_timeout(8000)
+        page.mouse.wheel(0, 100000)
+        page.wait_for_timeout(1500)
+        if page.locator("#navigate-after").count():
+            page.locator("#navigate-after").click()
+            page.wait_for_timeout(6000)
     finally:
         page.close()
-    return payload.get("data", {})
+    if not pages:
+        return {}
+    merged = dict(pages[0])
+    merged["videos"] = [video for data in pages for video in data.get("videos", [])]
+    return merged
 
 
 def studio_videos(payload: dict) -> list[dict]:

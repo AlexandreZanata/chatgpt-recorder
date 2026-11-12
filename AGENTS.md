@@ -93,6 +93,11 @@ Agent workflow for **"faça N vídeos e poste"**:
 Verification: `python3 -m unittest tests.test_ytbot_logic` and the size/complexity
 gate on the new files.
 
+**Always push bot fixes:** every small behavior fix to `tools/ytbot` (or to the
+capture extension used by it) must be committed and pushed to GitHub
+(`origin main`) in the same task, after the quality gates pass. Never include
+`.local/`, generated `.pyc` files or unrelated workspace files in that commit.
+
 When rules conflict with existing code, **rules prevail** — unless the user explicitly overrides for a task.
 
 ---
