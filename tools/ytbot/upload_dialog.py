@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 
-from . import logic
+from . import config, logic
 
 
 def answer_audience(page) -> None:
@@ -83,6 +83,25 @@ def schedule_in_dialog(page, slot) -> None:
         raise RuntimeError("schedule button did not become ready")
     page.evaluate("()=>{const b=document.querySelector('#done-button'); if(b)b.click()}")
     page.wait_for_timeout(10000)
+
+
+def scheduled_at(context, video_id: str, slot) -> bool:
+    page = context.new_page()
+    try:
+        page.goto(config.STUDIO_EDIT.format(video_id=video_id), timeout=90000)
+        page.wait_for_timeout(8000)
+        page.mouse.wheel(0, 4000)
+        page.wait_for_timeout(1500)
+        if page.evaluate("()=>document.querySelector('#visibility-text')?.innerText") != "Programado":
+            return False
+        page.get_by_role("button", name="Editar status de visibilidade").click()
+        page.wait_for_timeout(2000)
+        model = json.loads(page.evaluate(
+            "()=>document.querySelector('#publish-from-private-non-sponsor-selector')?.getAttribute('model')"))
+        expected = {"year": slot.year, "month": slot.month - 1, "day": slot.day}
+        return model.get("date") == expected and model.get("selectedTimeOfDayValue") == slot.hour * 3600
+    finally:
+        page.close()
 
 
 def fill_editable(page, index: int, text: str) -> None:

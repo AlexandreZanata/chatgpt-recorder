@@ -57,7 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     check.set_defaults(func=command_check)
     run = sub.add_parser("run", help="generate, render, upload and schedule videos")
     run.add_argument("--count", type=int, default=1)
-    run.add_argument("--parallel", type=int, default=1)
+    run.add_argument("--parallel", type=int, default=0,
+                     help="tabs used for article and audio stages (0 = one per video)")
     run.add_argument("--upload-cdp", type=int, default=0)
     run.set_defaults(func=command_run)
     return parser

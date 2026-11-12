@@ -11,7 +11,6 @@ from pathlib import Path
 
 from . import config, logic
 
-AUDIO_LOCK = threading.Lock()
 COPY_LOCK = threading.Lock()
 
 
@@ -122,12 +121,20 @@ def generate_article(page, topic: str, run_dir: Path, extra_header: str = "") ->
     return text
 
 
-def _audio_entry(context, start: str):
+def _same_tab(item, tab_url: str) -> bool:
+    if not tab_url:
+        return True
+    key = tab_url.split("?")[0].rstrip("/")
+    return str(item.get("tabUrl", "")).split("?")[0].rstrip("/") == key
+
+
+def _audio_entry(context, start: str, tab_url: str = ""):
     workers = [w for w in context.service_workers if config.EXT_ID in (w.url or "")]
     if not workers:
         return None
     history = workers[0].evaluate("chrome.storage.local.get('captureHistory')").get("captureHistory", [])
-    fresh = [item for item in history if str(item.get("capturedAt", "")) >= start]
+    fresh = [item for item in history
+             if str(item.get("capturedAt", "")) >= start and _same_tab(item, tab_url)]
     if not fresh:
         return None
     entry = fresh[0]
@@ -146,28 +153,28 @@ def _save_audio(entry, item, run_dir: Path) -> Path | None:
 
 
 def capture_audio(page, context, run_dir: Path, timeout: int = 3600) -> Path:
-    with AUDIO_LOCK:
-        start = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-        clicked = page.evaluate(
-            "()=>{const b=[...document.querySelectorAll('button[aria-label=\"Read aloud\"]')];"
-            "if(!b.length)return 'none'; b[b.length-1].click(); return 'clicked'}"
-        )
-        log(f"read aloud: {clicked}")
-        if clicked == "none":
-            raise RuntimeError("Read aloud button was not available")
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            page.wait_for_timeout(5000)
-            found = _audio_entry(context, start)
-            if not found:
-                continue
-            entry, item = found
-            log(f"audio {entry.get('status')} / {item.get('state')} / {item.get('fileSize')} bytes")
-            destination = _save_audio(entry, item, run_dir)
-            if destination:
-                log(f"audio saved: {destination.name} ({destination.stat().st_size} bytes)")
-                return destination
-        raise TimeoutError("audio capture timed out")
+    start = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    tab_url = page.url
+    clicked = page.evaluate(
+        "()=>{const b=[...document.querySelectorAll('button[aria-label=\"Read aloud\"]')];"
+        "if(!b.length)return 'none'; b[b.length-1].click(); return 'clicked'}"
+    )
+    log(f"read aloud: {clicked} ({tab_url})")
+    if clicked == "none":
+        raise RuntimeError("Read aloud button was not available")
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        page.wait_for_timeout(5000)
+        found = _audio_entry(context, start, tab_url)
+        if not found:
+            continue
+        entry, item = found
+        log(f"audio {entry.get('status')} / {item.get('state')} / {item.get('fileSize')} bytes")
+        destination = _save_audio(entry, item, run_dir)
+        if destination:
+            log(f"audio saved: {destination.name} ({destination.stat().st_size} bytes)")
+            return destination
+    raise TimeoutError("audio capture timed out")
 
 
 def generate_topics(context, count: int, existing: list[str]) -> list[str]:

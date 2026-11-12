@@ -69,11 +69,11 @@ Runtime and data:
 - Catalog: `.local/ytbot/catalog.json` (refresh with
   `python3 -m tools.ytbot catalog`); duplicate check:
   `python3 -m tools.ytbot check "topic"`.
-- Speed: article generation is sequential (concurrency 4 produced short
-  articles below 35 minutes); audio capture is serialized; metadata/thumbnail
-  run in parallel; rendering and uploads stay serialized. Use
-  `--parallel 4 --upload-cdp <port>` when the signed-in main profile is running
-  on Xvfb.
+- Speed: article generation and Read aloud capture run in parallel with one tab
+  per video (N videos = N tabs); each audio download is matched to its run by
+  the tab URL stored in the extension history. Rendering and uploads stay
+  serialized. Use `--parallel N` to override the tab count (0 = one per video),
+  and `--upload-cdp <port>` when the signed-in main profile runs on Xvfb.
 - Full process map: `tools/ytbot/README.md`.
 
 If an upload opens the Google account chooser, the bot profile session expired:

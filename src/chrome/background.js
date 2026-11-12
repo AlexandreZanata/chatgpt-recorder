@@ -13,7 +13,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!trustedSender(sender, chrome.runtime.id)) return false;
   captureQueue = captureQueue.then(async () => {
     if (await suppressAutomatic(sender, chrome)) return { skipped: true };
-    return downloadCapture(message, chrome);
+    return downloadCapture(message, chrome, sender);
   })
     .then(sendResponse).catch((error) => {
       updateAction(chrome, 'setIcon', { path: 'icons/icon-error.png' });

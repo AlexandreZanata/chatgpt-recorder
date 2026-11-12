@@ -39,10 +39,10 @@ export function captureFilename(settings, title, mime) {
   return `${folder ? folder + '/' : ''}${name}${MIME_EXTENSION_MAP[mime]}`;
 }
 
-export async function downloadCapture(message, api) {
+export async function downloadCapture(message, api, sender) {
   const mime = audioMime(message.dataUrl);
   if (!mime) throw new Error('Invalid audio payload.');
-  return downloadSource({ ...message, url: message.dataUrl }, mime, api);
+  return downloadSource({ ...message, url: message.dataUrl, tabUrl: sender?.tab?.url || '' }, mime, api);
 }
 
 export async function downloadRecording(recording, api) {
@@ -69,7 +69,8 @@ async function downloadSource(message, mime, api, manual = false) {
   await api.storage.session.set({ sessionCaptureCount: count });
   const history = Array.isArray(settings.captureHistory) ? settings.captureHistory : [];
   await api.storage.local.set({ captureHistory: [
-    { title, filename, downloadId, status: 'pending', capturedAt: new Date().toISOString() }, ...history
+    { title, filename, downloadId, status: 'pending', capturedAt: new Date().toISOString(),
+      tabUrl: message.tabUrl || '' }, ...history
   ].slice(0, DEFAULTS.MAX_HISTORY) });
   updateAction(api, 'setBadgeText', { text: String(count) });
   updateAction(api, 'setBadgeBackgroundColor', { color: '#6366f1' });

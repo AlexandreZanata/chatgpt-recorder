@@ -10,7 +10,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from . import catalog, config, logic, runtime, upload_dialog
+from . import config, logic, runtime, upload_dialog
 
 
 def log(message: str) -> None:
@@ -129,6 +129,13 @@ def write_result(run_dir: Path, result: dict) -> None:
 
 
 def open_upload_dialog(context, video_id: str, title: str = ""):
+    page = open_edit(context, video_id)
+    draft = page.get_by_text("Editar rascunho", exact=True)
+    if draft.count():
+        draft.first.click()
+        page.wait_for_timeout(8000)
+        return page
+    page.close()
     url = (config.STUDIO_UPLOAD + "?d=ud&filter=%5B%5D&sort=%7B%22columnType%22%3A%22date%22%2C%22sortOrder%22%3A%22DESCENDING%22%7D&udvid=" + video_id)
     page = context.new_page()
     page.goto(url, timeout=90000)
@@ -155,7 +162,7 @@ def schedule_existing(context, run_dir: Path, result: dict, slot) -> dict:
             upload_dialog.schedule_in_dialog(page, slot)
         finally:
             page.close()
-        if catalog.is_scheduled(context, result["videoId"]):
+        if upload_dialog.scheduled_at(context, result["videoId"], slot):
             result["scheduled"] = True
             result["slot"] = logic.slot_label(slot)
             write_result(run_dir, result)
