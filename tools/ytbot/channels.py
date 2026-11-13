@@ -21,6 +21,21 @@ class Channel:
 
 
 CHANNELS = {
+    "zaflas": Channel(
+        slug="zaflas",
+        name="Zaflas",
+        handle="@zaflas",
+        channel_id="UCi2aftoK7vlS3A6OozMHXKg",
+        prompts="zaflas_agro",
+        background="agro",
+        language="pt-BR",
+        min_article_chars=40000,
+        article_retry=(
+            "Target narration length: 6,000 to 7,200 Brazilian Portuguese words, "
+            "about 30 minutes at the channel's narration pace. Preserve the "
+            "fixed Zaflas Agro opening identification and final sign-off."
+        ),
+    ),
     "fallem-prince": Channel(
         slug="fallem-prince",
         name="fallem prince",
@@ -35,15 +50,15 @@ CHANNELS = {
     "whispers-from-heaven": Channel(
         slug="whispers-from-heaven",
         name="Whispers From Heaven",
-        handle="",
-        channel_id="",
+        handle="@WhispersFromHeaven1",
+        channel_id="UCEE9qAtucy5OZcjvcyytu4w",
         prompts="whispers_from_heaven",
         background="whispers_from_heaven",
         language="en",
-        min_article_chars=11000,
+        min_article_chars=13000,
         article_retry=(
-            "Target narration length: 2,200 to 2,600 words, about 15 minutes "
-            "at a calm pace."
+            "Target narration length: 2,600 to 3,200 words, about 17 to 20 "
+            "minutes at a calm pace."
         ),
     ),
 }

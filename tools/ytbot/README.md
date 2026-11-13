@@ -11,7 +11,12 @@ publishes immediately and never opens windows in the main desktop workspace.
 | Profile | Channel | Style |
 |---------|---------|-------|
 | `fallem-prince` | fallem prince | English psychology/philosophy essays, 35–80 min, Black Ink Void thumbnails. |
-| `whispers-from-heaven` | Whispers From Heaven | English Christian biblical story narrations, 12–18 min, Sacred Brown Engraving thumbnails. |
+| `whispers-from-heaven` | Whispers From Heaven | English Christian biblical story narrations, 14–22 min, Sacred Brown Engraving thumbnails. |
+| `zaflas` | Zaflas / Zaflas Agro | Brazilian Portuguese agribusiness, about 30 min, photographic agricultural thumbnails with Portuguese text, `agro` background. |
+
+The [Zaflas profile notes](prompts/zaflas_agro/README.md) record the public-video
+duration sample, description format, fixed narration opening/sign-off, supplied
+thumbnail identity, and the bot account's pending Studio access.
 
 If the user asks for videos without naming a channel, ask **"Para qual canal os
 vídeos?"** before running. The bot switches the active Studio channel through the

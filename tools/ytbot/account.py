@@ -17,6 +17,9 @@ def ensure_channel(context, name: str | None = None) -> None:
     try:
         page.goto("https://www.youtube.com/", timeout=90000)
         page.wait_for_timeout(7000)
+        page.keyboard.press("Escape")
+        page.evaluate(
+            "()=>document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(e=>e.remove())")
         page.locator("#avatar-btn").click()
         page.wait_for_timeout(2000)
         switcher = None

@@ -3,7 +3,7 @@ Write a complete long-form Christian audio narration about the theme below.
 REQUIREMENTS:
 
 - Everything must be 100% in English.
-- Length: 2,200 to 2,600 words, about 15 minutes at a calm narration pace.
+- Length: 2,600 to 3,200 words, about 17 to 20 minutes at a calm narration pace.
 - Open with a vivid, emotional scene or question that makes the listener feel seen.
 - Retell one specific biblical story, passage, or prayer moment faithfully, with historical and emotional detail.
 - Connect the story to the listener's inner life: waiting, silence, fear, grief, doubt, exhaustion, regret, hope, and trust.

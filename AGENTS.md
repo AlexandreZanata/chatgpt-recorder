@@ -66,7 +66,7 @@ Rules enforced by code:
 | Profile | Channel | Style |
 |---------|---------|-------|
 | `fallem-prince` | fallem prince | English psychology/philosophy essays, 35–80 min, Black Ink Void thumbnails, `fallem_prince` background. |
-| `whispers-from-heaven` | Whispers From Heaven | English Christian biblical story narrations, 12–18 min, Sacred Brown Engraving thumbnails, `whispers_from_heaven` background. |
+| `whispers-from-heaven` | Whispers From Heaven | English Christian biblical story narrations, 14–22 min, Sacred Brown Engraving thumbnails, `whispers_from_heaven` background. |
 
 Per-channel prompts live in `tools/ytbot/prompts/<profile>/`. Per-channel data
 (runs, catalog, topics, records) lives in `.local/ytbot/channels/<slug>/`; the
