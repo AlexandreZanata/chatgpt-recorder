@@ -32,8 +32,10 @@ def _render_video(run_dir: Path) -> Path:
 
     narration = fit_narration(run_dir)
     output = run_dir / "video.mp4"
+    background_image = (
+        config.ROOT / "assets" / "backgrounds" / f"{config.THUMBNAIL_THEME}.jpg")
     background, is_video = resolve_standard_background(
-        config.ROOT / "assets/backgrounds/fallem_prince.jpg", config.THUMBNAIL_THEME)
+        background_image, config.THUMBNAIL_THEME)
     duration = get_audio_duration(narration) + config.QUICK_OUTRO_SECONDS
     log(f"narration {get_audio_duration(narration):.1f}s, output {duration:.1f}s")
     segments = transcribe_audio_to_segments(str(narration))

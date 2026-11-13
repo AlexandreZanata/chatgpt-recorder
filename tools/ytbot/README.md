@@ -1,15 +1,32 @@
 # YouTube Automation Bot
 
-Local, hidden-workspace pipeline for the **fallem prince** channel. It takes a
-batch count, generates topics when needed, produces the article, narration,
-metadata and Black Ink Void thumbnail, renders the video, uploads it as a draft,
-adds the end-screen recommendation and **schedules** it. It never publishes
-immediately and never opens windows in the main desktop workspace.
+Local, hidden-workspace pipeline for the supported channels. It takes a channel
+profile and a batch count, generates topics when needed, produces the article,
+narration, metadata and channel-specific thumbnail, renders the video, uploads
+it as a draft, adds the end-screen recommendation and **schedules** it. It never
+publishes immediately and never opens windows in the main desktop workspace.
+
+## Channels
+
+| Profile | Channel | Style |
+|---------|---------|-------|
+| `fallem-prince` | fallem prince | English psychology/philosophy essays, 35–80 min, Black Ink Void thumbnails. |
+| `whispers-from-heaven` | Whispers From Heaven | English Christian biblical story narrations, 12–18 min, Sacred Brown Engraving thumbnails. |
+
+If the user asks for videos without naming a channel, ask **"Para qual canal os
+vídeos?"** before running. The bot switches the active Studio channel through the
+YouTube account switcher. If the profile channel is not listed, stop and ask the
+user to sign in or add the channel.
+
+Per-channel prompts live in `tools/ytbot/prompts/<profile>/`. Per-channel data
+(runs, catalog, topics, records) lives in
+`.local/ytbot/channels/<slug>/`; the legacy `fallem-prince` data stays at
+`.local/ytbot/`.
 
 ## One command
 
 ```bash
-python3 -m tools.ytbot run --count 10
+python3 -m tools.ytbot run --channel fallem-prince --count 10
 ```
 
 The agent can run that command in the background and only intervene if the bot
@@ -36,8 +53,8 @@ once in the hidden browser.
 ## Catalog and topic queue
 
 ```bash
-python3 -m tools.ytbot catalog
-python3 -m tools.ytbot check "Why We Avoid Silence"
+python3 -m tools.ytbot catalog --channel fallem-prince
+python3 -m tools.ytbot check "Why We Avoid Silence" --channel fallem-prince
 ```
 
 - `.local/ytbot/topics.txt`: one topic per line, used first.
@@ -134,7 +151,7 @@ When the main Chrome profile is the only one with a valid YouTube session,
 launch it on Xvfb with remote debugging and pass its port:
 
 ```bash
-python3 -m tools.ytbot run --count 4 --parallel 4 --upload-cdp 9301
+python3 -m tools.ytbot run --channel fallem-prince --count 4 --parallel 4 --upload-cdp 9301
 ```
 
 ## Notes

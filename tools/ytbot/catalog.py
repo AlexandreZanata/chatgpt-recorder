@@ -10,6 +10,8 @@ from . import config, logic
 
 
 def scrape_public_catalog(context) -> list[dict]:
+    if not config.CHANNEL_HANDLE:
+        return []
     page = context.new_page()
     videos: dict[str, dict] = {}
     try:

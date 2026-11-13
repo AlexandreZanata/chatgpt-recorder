@@ -38,8 +38,11 @@ windows in the main desktop workspace.
 **Single command**
 
 ```bash
-python3 -m tools.ytbot run --count N
+python3 -m tools.ytbot run --channel fallem-prince --count N
 ```
+
+`--channel` is required. If the user asks for videos without naming a channel,
+ask **"Para qual canal os vídeos?"** before running.
 
 Rules enforced by code:
 
@@ -57,6 +60,21 @@ Rules enforced by code:
   **Melhor para o espectador** (YouTube chooses the best video).
 - Every stage is recorded in `.local/ytbot/records/records.jsonl`,
   `.local/ytbot/records/RECORDS.md` and `.local/ytbot/runs/<slug>/record.json`.
+
+### Channel profiles
+
+| Profile | Channel | Style |
+|---------|---------|-------|
+| `fallem-prince` | fallem prince | English psychology/philosophy essays, 35–80 min, Black Ink Void thumbnails, `fallem_prince` background. |
+| `whispers-from-heaven` | Whispers From Heaven | English Christian biblical story narrations, 12–18 min, Sacred Brown Engraving thumbnails, `whispers_from_heaven` background. |
+
+Per-channel prompts live in `tools/ytbot/prompts/<profile>/`. Per-channel data
+(runs, catalog, topics, records) lives in `.local/ytbot/channels/<slug>/`; the
+legacy `fallem-prince` data stays at `.local/ytbot/`.
+
+The bot switches the active Studio channel through the YouTube account switcher
+before every batch. If the profile channel is not listed, stop and ask the user
+to sign in to the right Google account or create/add the channel. Never guess.
 
 Runtime and data:
 
@@ -84,7 +102,7 @@ the normal Chrome is open.
 Agent workflow for **"faça N vídeos e poste"**:
 
 1. Run the command detached:
-   `setsid python3 -m tools.ytbot run --count N > /tmp/ytbot-run.log 2>&1 < /dev/null &`
+   `setsid python3 -m tools.ytbot run --channel <profile> --count N > /tmp/ytbot-run.log 2>&1 < /dev/null &`
 2. Poll the log and `.local/ytbot/records/records.jsonl`.
 3. Intervene only if the process exits non-zero or a stage is recorded as
    `error`. Completed stages are resumable.

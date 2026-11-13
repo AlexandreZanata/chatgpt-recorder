@@ -191,8 +191,8 @@ def launch_upload_context(playwright):
 def select_channel(page) -> None:
     page.wait_for_timeout(8000)
     body = page.locator("body").inner_text()
-    if "Selecione um canal" in body or "signin_prompt" in page.url:
-        link = page.get_by_text("fallem prince", exact=True)
+    if "Selecione um canal" in body or "Select a channel" in body or "signin_prompt" in page.url:
+        link = page.get_by_text(config.CHANNEL_NAME, exact=True)
         if link.count():
             link.first.click()
             page.wait_for_timeout(6000)

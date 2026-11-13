@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from playwright.sync_api import sync_playwright
 
-from . import catalog, config, logic, pipeline, runtime
+from . import account, catalog, config, logic, pipeline, runtime
 from .topics import prepare_topics
 
 
@@ -72,6 +72,23 @@ def _summary(topics: list[str]) -> None:
     print("\n".join(lines), flush=True)
 
 
+def _refresh_catalog(context) -> None:
+    data = logic.load_catalog()
+    if not data and config.CHANNEL_HANDLE:
+        data = catalog.scrape_public_catalog(context)
+    if data:
+        catalog.write_catalog_markdown(data)
+
+
+def _upload_context(playwright, context, upload_cdp):
+    if not upload_cdp:
+        return context
+    browser = playwright.chromium.connect_over_cdp(f"http://127.0.0.1:{upload_cdp}")
+    upload_context = browser.contexts[0]
+    account.ensure_channel(upload_context)
+    return upload_context
+
+
 def run_batch(count: int, parallel: int = 0, upload_cdp: int | None = None) -> list:
     if not (config.PROFILE / "Default" / "Cookies").is_file():
         runtime.setup_profile()
@@ -81,13 +98,9 @@ def run_batch(count: int, parallel: int = 0, upload_cdp: int | None = None) -> l
         browser, context = runtime.connect_hidden(playwright)
         runtime.configure_downloads(browser)
         runtime.configure_extension(context)
-        catalog_data = logic.load_catalog()
-        if not catalog_data:
-            catalog_data = catalog.scrape_public_catalog(context)
-        catalog.write_catalog_markdown(catalog_data)
-        upload_browser = (playwright.chromium.connect_over_cdp(f"http://127.0.0.1:{upload_cdp}")
-                          if upload_cdp else None)
-        upload_context = upload_browser.contexts[0] if upload_browser else context
+        account.ensure_channel(context)
+        _refresh_catalog(context)
+        upload_context = _upload_context(playwright, context, upload_cdp)
         studio_payload = catalog.fetch_creator_videos(upload_context)
         local_occupied, local_titles = _local_state()
         scheduled_titles = [item.get("title", "") for item in catalog.studio_videos(studio_payload)] + local_titles

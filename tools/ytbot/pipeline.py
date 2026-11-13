@@ -30,15 +30,15 @@ def article_stage(context, topic: str) -> Path:
     (run_dir / "topic.txt").write_text(topic, encoding="utf-8")
     logic.set_run_field(run_dir, topic=topic)
     article = run_dir / "article.txt"
-    if article.is_file() and article.stat().st_size >= 40000:
+    if article.is_file() and article.stat().st_size >= config.MIN_ARTICLE_CHARS:
         return run_dir
     page = context.new_page()
     try:
         text = chat.generate_article(page, topic, run_dir)
-        if len(text) < 40000:
+        if len(text) < config.MIN_ARTICLE_CHARS:
             page.close()
             page = context.new_page()
-            chat.generate_article(page, topic, run_dir, "Target narration length: at least 6,500 words.")
+            chat.generate_article(page, topic, run_dir, config.ARTICLE_RETRY)
         logic.set_run_field(run_dir, conversation=page.url)
         logic.record_event(run_dir, "article", "ok", f"{(run_dir / 'article.txt').stat().st_size} bytes")
     finally:

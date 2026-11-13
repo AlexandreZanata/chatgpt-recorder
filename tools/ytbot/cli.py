@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from . import catalog, config, logic, runtime
+from . import catalog, channels, config, logic, runtime
 from .batch import run_batch
 
 
@@ -20,7 +20,9 @@ def command_setup(_args) -> None:
     print("[ytbot] runtime ready in hidden workspace", config.DISPLAY)
 
 
-def command_catalog(_args) -> None:
+def command_catalog(args) -> None:
+    if args.channel:
+        channels.apply(args.channel)
     runtime.start_hidden_chrome()
     from playwright.sync_api import sync_playwright
     with sync_playwright() as playwright:
@@ -31,6 +33,8 @@ def command_catalog(_args) -> None:
 
 
 def command_check(args) -> None:
+    if args.channel:
+        channels.apply(args.channel)
     matches = logic.similar_topics(args.topic, logic.load_catalog())
     if matches:
         print("[ytbot] topic is similar to:")
@@ -41,6 +45,7 @@ def command_check(args) -> None:
 
 
 def command_run(args) -> None:
+    channels.apply(args.channel)
     failures = run_batch(args.count, args.parallel, args.upload_cdp or None)
     print("[ytbot] process finished")
     if failures:
@@ -51,11 +56,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ytbot", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("setup", help="prepare cookies, extension and hidden Chrome").set_defaults(func=command_setup)
-    sub.add_parser("catalog", help="refresh the channel catalog").set_defaults(func=command_catalog)
+    catalog_parser = sub.add_parser("catalog", help="refresh the channel catalog")
+    catalog_parser.add_argument("--channel", choices=sorted(channels.CHANNELS), default="")
+    catalog_parser.set_defaults(func=command_catalog)
     check = sub.add_parser("check", help="check a topic against the catalog")
     check.add_argument("topic")
+    check.add_argument("--channel", choices=sorted(channels.CHANNELS), default="")
     check.set_defaults(func=command_check)
     run = sub.add_parser("run", help="generate, render, upload and schedule videos")
+    run.add_argument("--channel", choices=sorted(channels.CHANNELS), required=True,
+                     help="channel profile; ask the user when it is not specified")
     run.add_argument("--count", type=int, default=1)
     run.add_argument("--parallel", type=int, default=0,
                      help="tabs used for article and audio stages (0 = one per video)")
