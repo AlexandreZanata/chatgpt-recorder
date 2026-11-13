@@ -1,0 +1,180 @@
+# ZAFLAS AGRO THUMBNAIL MASTER PROMPT
+Create **ONE finished professional 16:9 YouTube thumbnail** for the **Zaflas Agro** channel based on the attached article and any explicitly supplied topic, title or thumbnail text.
+
+## INPUT
+**TOPIC:** Use the central agricultural subject of the attached article. Do not substitute a generic agriculture theme.
+
+**THUMBNAIL TEXT:** If exact thumbnail text is supplied, use it verbatim. Otherwise, silently choose one short, accurate Brazilian Portuguese phrase of 2 to 6 words from the article's main question or message. This final phrase is the supplied text for all accuracy rules below. Preserve accents and cedillas. Never render a placeholder. Do not translate the phrase into English.
+
+If no specific highlighted keyword is provided, automatically identify the **single most important word or short phrase** in the thumbnail text and use it as the visual keyword.
+
+## ZAFLAS AGRO VISUAL IDENTITY
+Maintain the same recognizable visual identity across every thumbnail, regardless of topic.
+
+The composition must follow this structure:
+**16:9 YouTube thumbnail**; premium Brazilian agribusiness visual identity; professional, modern, authoritative and highly clickable; realistic photographic imagery; cinematic agricultural photography; strong visual contrast; simple composition; no unnecessary decorative elements; no cards; no icons; no logos; no small secondary text; no frames; no infographic appearance; no excessive visual effects; no artificial futuristic interface; no clutter.
+
+The thumbnail should look like a **premium agricultural documentary, major agribusiness publication or professional rural media channel**, while still being optimized for YouTube CTR.
+
+## COMPOSITION
+Use a strong **split-style cinematic composition**, but without creating a visible dividing line.
+
+### LEFT SIDE : TEXT
+Reserve approximately **45-50% of the image for typography**.
+
+Create a naturally darkened area using:
+black or extremely dark background; smooth cinematic gradient; subtle blending into the photograph; enough negative space for maximum readability.
+
+Do NOT place the text inside a visible box.
+
+The black area should feel naturally integrated into the photograph.
+
+The transition from dark area to agricultural scene should be smooth and cinematic.
+
+### RIGHT SIDE : SUBJECT
+Use approximately **50-55% of the image for a powerful photographic representation of the topic**.
+
+The image must immediately communicate the subject even if the viewer does not read the text.
+
+Show the most visually recognizable elements related to the topic.
+
+Examples:
+wheat → mature wheat field, detailed wheat ears, harvest landscape; soybeans → soybean plantation, healthy plants, machinery; corn → mature cornfield, ears of corn, harvesting; soil → rich agricultural soil, roots, soil profile, crop emerging; livestock → cattle in a professional Brazilian production environment; swine farming → modern pig production facility; poultry → professional poultry production; irrigation → irrigation equipment operating over crops; agricultural machinery → tractor, combine or implement in real field conditions; technology → modern machinery, precision agriculture or realistic field technology; fertilizers → healthy crop and realistic fertilization context; pests → affected crop with the relevant pest clearly visible; productivity → highly productive and visually impressive crop; harvest → machinery operating during harvest; coffee → coffee plantation and ripe coffee cherries; sugarcane → dense sugarcane field and agricultural machinery.
+
+Always adapt the environment specifically to the actual topic.
+
+Do NOT use generic agriculture imagery when a more specific visual representation is possible.
+
+## PHOTOGRAPHIC STYLE
+The agricultural scene must be:
+photorealistic; extremely detailed; professional agricultural photography; realistic Brazilian agribusiness environment whenever appropriate; cinematic depth; natural textures; realistic plants, animals and machinery; professional commercial photography quality; sharp primary subject; controlled depth of field; rich but natural contrast; dramatic yet believable lighting; premium DSLR / cinema-camera appearance; realistic proportions and anatomy.
+
+Whenever appropriate, use **golden-hour or dramatic natural sunlight** to create depth, warmth and visual impact.
+
+Do not make every thumbnail orange. The lighting and environment should adapt naturally to the subject.
+
+## TYPOGRAPHY
+Typography is one of the most important elements of the Zaflas Agro identity.
+
+Use:
+extremely bold; tall condensed sans-serif font; uppercase letters; clean solid characters; professional editorial typography; very high readability; strong visual hierarchy; tight but elegant line spacing; carefully controlled alignment.
+
+Typography should resemble the visual impact of **Anton, Bebas Neue, Oswald Heavy, Impact-style editorial typography or another premium condensed display font**.
+
+Do NOT use:
+thin fonts; rounded playful fonts; handwritten fonts; serif fonts; distorted typography; scratched letters; grunge texture; cracked text; metallic effects; glowing text; excessive shadows; 3D extrusion.
+
+The letters must have **clean, solid fills and crisp edges**.
+
+## TEXT HIERARCHY
+Arrange the exact supplied thumbnail text across several lines to create the strongest possible hierarchy.
+
+Supporting words should normally appear in:
+**SOLID WHITE**
+
+The main keyword or strongest phrase must be significantly larger and placed as the dominant visual element.
+
+The keyword can occupy one or even two lines when necessary.
+
+Do not force every line to have the same size.
+
+Create strong editorial hierarchy.
+
+The viewer should understand the hierarchy in this order:
+1. MAIN KEYWORD
+2. MAIN MESSAGE
+3. SUPPORTING WORDS
+
+Keep all important text comfortably inside YouTube safe margins.
+
+Do not place letters too close to the edges.
+
+## DYNAMIC KEYWORD COLOR SYSTEM
+Use **ONLY TWO MAIN TYPOGRAPHIC COLORS**:
+1. solid white for supporting text
+2. one strong thematic color for the main keyword
+
+Automatically select the accent color according to the subject.
+
+The color must have a **clear visual or conceptual connection with the topic**.
+
+Examples:
+wheat / grain / harvest → golden yellow, wheat gold or warm amber; soybeans / crops / sustainability / agronomy → vivid agricultural green; general agriculture / productivity / crops → strong green; swine farming → strong red; livestock → earthy brown, warm amber or strong green depending on the scene; machinery → machinery yellow, industrial orange or strong agricultural green; irrigation / water → strong blue; soil → earthy orange, clay brown or terracotta; coffee → deep coffee brown, warm red or ripe-cherry red; corn → intense corn yellow; cotton → clean light tone or agricultural green, maintaining contrast; sugarcane → deep sugarcane green; fertilizers / plant nutrition → vivid green or mineral-inspired accent; pests / diseases / warnings → red or strong orange; technology / precision agriculture → electric but professional green or blue; finance / profitability → green; drought / heat → orange or warm red.
+
+These are guidelines, not fixed rules.
+
+Choose the color that creates the strongest semantic association **while maintaining excellent contrast with the background**.
+
+Never use random colors simply for decoration.
+
+## COLOR INTEGRATION
+Whenever possible, subtly repeat the keyword accent color somewhere in the photographic scene so the thumbnail feels visually unified.
+
+Examples:
+red keyword → red equipment or subtle warm-red details in the environment; green keyword → healthy green crop; gold keyword → wheat, sunset or harvest tones; blue keyword → water or sky; orange keyword → soil, sunset or machinery.
+
+The repetition should feel natural, not artificial.
+
+## VISUAL BALANCE
+The photograph must remain visually powerful but should NEVER compete with the text.
+
+Keep the busiest and most detailed elements primarily on the right side.
+
+The left side behind the typography should remain dark, simple and clean.
+
+Use lighting and composition to guide the viewer's eyes from:
+**TEXT → KEYWORD → MAIN AGRICULTURAL SUBJECT**
+
+The main agricultural subject should be clearly identifiable even at small thumbnail size.
+
+## CLICKABILITY
+Make the thumbnail visually striking enough to stand out in a YouTube feed without looking sensationalist or amateur.
+
+Prioritize:
+immediate understanding; strong contrast; huge readable typography; recognizable agricultural subject; cinematic photography; emotional visual impact; professional credibility; clear hierarchy; minimal visual noise.
+
+The result should feel targeted toward **Brazilian farmers, producers, agronomists, agricultural professionals and people interested in agribusiness**.
+
+## TEXT ACCURACY : CRITICAL
+Render the supplied Portuguese thumbnail text **EXACTLY as provided**.
+
+Preserve:
+spelling; accents; cedillas; punctuation; word order.
+
+Do not translate.
+
+Do not rewrite.
+
+Do not add any other words.
+
+Do not duplicate words.
+
+Do not invent subtitles.
+
+There must be **ONLY ONE occurrence of each intended text element**.
+
+## CONSISTENCY RULE
+Every Zaflas Agro thumbnail should look like it belongs to the **same channel and same visual system**, even when the topic changes.
+
+Always preserve these core elements:
+**huge condensed typography + white supporting text + one thematic keyword color + dark left-side gradient + photorealistic agricultural scene on the right + cinematic lighting + strong professional hierarchy + minimal composition.**
+
+Change only what the topic demands:
+agricultural subject; environment; crop or animal; machinery; weather; lighting; photographic details; main keyword; thematic accent color.
+
+## FINAL REQUIREMENT
+Generate **ONE complete finished thumbnail**, not a mockup.
+
+No explanations.
+
+No alternate versions.
+
+No design notes.
+
+No visible guidelines.
+
+No placeholder text.
+
+No Zaflas Agro logo unless explicitly requested.
+
+The final image must look immediately ready to publish on YouTube.

@@ -1,0 +1,41 @@
+Generate YouTube metadata for Zaflas Agro from the attached complete article and its topic.
+Everything the viewer reads must be in Brazilian Portuguese. Preserve proper names and URLs.
+
+Return only this parser-compatible structure, without Markdown fences or extra labels:
+
+TITLE OPTIONS:
+1. [first title]
+2. [second title]
+3. [third title]
+
+DESCRIPTION:
+🌱 Conheça o Zaflas:  https://zaflas.com.br/
+
+🔔 Gostou do conteúdo? Inscreva-se no canal Zaflas Agro:
+https://www.youtube.com/channel/UCi2aftoK7vlS3A6OozMHXKg?sub_confirmation=1
+
+nossas redes:
+
+LinkedIn: https://linkedin.com/company/zaflas
+Instagram: https://instagram.com/zaflas
+Facebook: https://facebook.com/zaflas
+YouTube: https://youtube.com/@zaflas
+GitHub: https://github.com/zaflas
+
+[one topic-specific descriptive paragraph]
+
+[seven relevant lowercase hashtags on one line]
+
+TAGS: [relevant comma-separated SEO tags]
+
+RULES
+- Provide exactly three distinct accurate title options. The bot uses the first title. Keep each within YouTube's 100-character title limit.
+- Model the channel's existing titles: practical questions, hidden costs, trade-offs, evidence and consequences for the farm. Be clear, credible and compelling without sensational claims.
+- Preserve the complete fixed description prefix above, including website, subscription URL, social links, order, accents, capitalization, emojis and paragraph spacing. Do not invent other links or replace Zaflas with another channel.
+- Existing social-link separators are em dashes. Use the colons shown above to obey the bot's no-dash policy; keep the links and surrounding wording unchanged.
+- After the GitHub line, write one coherent paragraph of about 120 to 170 Portuguese words based specifically on the article. Explain the main question, what the listener will understand, the practical context, key technologies or practices, and limitations when relevant.
+- Do not add a second sales pitch, a separate list of chapters, timestamps, references, a disclaimer block or unsupported facts.
+- Put seven relevant lowercase hashtags after the topic paragraph; use agricultural and topic-specific terms, including #zaflasagro when relevant.
+- Finish with TAGS: followed by comma-separated tags in Portuguese, retaining established technical names as appropriate. No # characters in this line. Keep the entire comma-separated tags string within 425 characters, including separators. Prioritize specific search terms over generic repetition.
+- Use no em dashes or en dashes anywhere in titles, descriptions, hashtags or tags.
+- Replace every bracketed placeholder with final content. Do not output the brackets or these rules.

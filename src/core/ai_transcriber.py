@@ -53,6 +53,19 @@ def transcribe_audio_to_segments(
                                 _transcribe_uncached)
 
 
+def transcribe_audio_in_language(
+    audio_path: str,
+    language: str,
+    model_name: str = "large-v3-turbo",
+    word_timestamps: bool = False,
+) -> List[Dict[str, Any]]:
+    """Recognize an explicitly selected bot language without auto-detection."""
+    if language not in ("en", "pt"):
+        raise ValueError("Bot subtitle recognition requires English (en) or Portuguese (pt).")
+    return cached_transcription(audio_path, model_name, language, word_timestamps,
+                                _transcribe_uncached)
+
+
 def _transcribe_uncached(audio_path, model_name, language, word_timestamps):
     """Transcribe audio file into timestamped segments using faster-whisper on GPU."""
     try:

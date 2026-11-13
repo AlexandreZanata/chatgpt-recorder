@@ -22,8 +22,14 @@ def render_video(run_dir: Path) -> Path:
         return _render_video(run_dir)
 
 
+def transcribe_narration(narration: Path | str) -> list[dict]:
+    from src.core.ai_transcriber import transcribe_audio_in_language
+
+    language = config.CHANNEL.language if config.CHANNEL else "en"
+    return transcribe_audio_in_language(str(narration), language.split("-", 1)[0])
+
+
 def _render_video(run_dir: Path) -> Path:
-    from src.core.ai_transcriber import transcribe_audio_to_segments
     from src.engine.audio_mixer import get_audio_duration
     from src.engine.classic_parallel import parallel_workers, render_parallel_video
     from src.engine.standard_backgrounds import resolve_standard_background
@@ -38,7 +44,7 @@ def _render_video(run_dir: Path) -> Path:
         background_image, config.THUMBNAIL_THEME)
     duration = get_audio_duration(narration) + config.QUICK_OUTRO_SECONDS
     log(f"narration {get_audio_duration(narration):.1f}s, output {duration:.1f}s")
-    segments = transcribe_audio_to_segments(str(narration))
+    segments = transcribe_narration(narration)
     log(f"transcribed {len(segments)} segments")
     subtitle = save_ass_subtitles(
         segments, run_dir / "narration.ass",

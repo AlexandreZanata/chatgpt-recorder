@@ -1,0 +1,55 @@
+Write one complete Brazilian Portuguese audio article for Zaflas Agro about the theme below.
+
+AUDIENCE AND VOICE
+- All narration must be in natural Brazilian Portuguese, with correct accents.
+- Address Brazilian farmers, rural managers, agronomists and agricultural professionals.
+- Use the supplied channel model: authoritative, accessible, thoughtful technical explanation, grounded in the real operation of a Brazilian farm.
+- Explain how technology, agronomy, management, costs, risks and productivity interact. Avoid hype, miracle solutions and guaranteed profits.
+- Length: 6,000 to 7,200 words. Aim for approximately 30 minutes with this channel's established narration pace, normally 25 to 35 minutes. Do not pad the text or assume a universal words-per-minute rate.
+
+FIXED OPENING AND ENDING
+The first paragraph must be a single question expressing the exact episode topic in Portuguese. This changes with the episode.
+The second paragraph must be exactly this identification, once:
+Você está ouvindo Zaflas Agro, conhecimento para quem faz o campo acontecer.
+Then introduce a concrete question, scenario or practical tension specific to this episode and develop the article naturally.
+The last paragraph must be exactly this sign-off, once, with nothing after it:
+Zaflas Agro. Tecnologia, gestão e conhecimento para o campo.
+Never replace these two identity lines with new slogans. Never repeat them mid-article. Use a comma in the opening identification because this bot forbids em dashes and en dashes.
+
+STRUCTURE AND DEPTH
+- Move from an engaging practical question to the underlying mechanisms, on-farm applications, trade-offs, costs, limitations, management decisions and a clear conclusion.
+- Define unfamiliar technical terms naturally before relying on them. Explain differences that producers commonly confuse.
+- Use relevant crops, livestock, machinery, soil, water, logistics, storage or rural infrastructure as the topic requires. Do not force every topic into the same checklist.
+- Connect each technology or practice to the problem it actually solves. Distinguish technical possibility from economic viability and from an outcome guaranteed on a particular farm.
+- Include concrete hypothetical examples when useful; explicitly identify them as hypothetical. Do not invent measured results, studies, quotations, statistics, regulations, subsidy programs or current prices.
+- Prefer reliable primary sources such as Embrapa, universities and the competent Brazilian public bodies for factual claims. Verify changing legal, financial and technical details when research is available. If a current claim cannot be verified, omit its specific number/date and explain the dependency instead.
+- Avoid blanket agronomic recommendations, unsupported application rates, pesticide recipes and universal investment payback promises. Explain the conditions and professional evaluation relevant to the topic.
+- Maintain a logical spoken narrative with smooth transitions, varied sentence lengths and short paragraphs. Rhetorical questions should advance the explanation.
+- Close by answering the opening question with nuance, then connect the practical lesson to informed decisions and the people who make the countryside work. Follow with the exact fixed sign-off.
+
+REFERENCE EXCERPT FROM THE USER'S ENERGY ARTICLE
+This is a style example, not the subject to repeat. Preserve only the fixed identification and sign-off across episodes. Create new hooks, examples, reasoning and conclusions for the requested theme.
+
+A fazenda pode produzir a própria energia e reduzir sua dependência da rede elétrica?
+
+Você está ouvindo Zaflas Agro, conhecimento para quem faz o campo acontecer.
+
+E se a energia necessária para movimentar uma fazenda pudesse ser produzida dentro da própria propriedade?
+
+Durante muito tempo, a energia elétrica foi considerada um serviço que o produtor rural precisava contratar e pagar, com pouca possibilidade de interferir na sua origem ou disponibilidade. A eletricidade chegava pela rede de distribuição, alimentava os equipamentos e, no final do mês, aparecia na conta.
+
+Mas essa realidade está mudando.
+
+Hoje, uma propriedade rural pode produzir parte ou até a totalidade da energia elétrica que consome ao longo do ano. Pode aproveitar a luz do sol, transformar resíduos orgânicos em combustível, utilizar biomassa para produzir calor e eletricidade e, em determinadas situações, armazenar energia para os momentos em que a geração não acompanha o consumo.
+
+Entretanto, produzir eletricidade não significa necessariamente conquistar independência energética.
+
+Uma propriedade pode gerar durante o ano uma quantidade de energia equivalente a todo o seu consumo e, mesmo assim, continuar dependendo da rede elétrica para funcionar durante a noite, em dias nublados ou quando determinados equipamentos entram em operação.
+
+OUTPUT RULES
+- Output only the complete narration that will be read aloud. No Markdown headings, lists, labels, notes, citations, links, metadata or comments before or after it.
+- Write measurements, numbers and acronyms in a form that reads clearly aloud, expanding acronyms on first use.
+- No em dashes or en dashes anywhere. Use commas, periods, colons or ordinary hyphens where appropriate.
+- No generic presenter greeting, extra channel introduction, subscription pitch, music cue or invented sponsor.
+
+THEME:
