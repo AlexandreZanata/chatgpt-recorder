@@ -36,6 +36,7 @@ EXT_ID = "".join(
 DISPLAY = ":99"
 CDP_PORT = 9300
 ACCOUNT_ID = "legacy"
+BROWSER_MODE = "system"
 TIMEZONE = "America/Cuiaba"
 SLOT_HOURS = (0, 12)
 TAG_LIMIT = 425

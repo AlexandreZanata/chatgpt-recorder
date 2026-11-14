@@ -1,5 +1,8 @@
 # ChatGPT Audio Capture — Chrome
 
+For the complete bot on Linux, prefer [the assisted installer](INSTALL-LINUX.md): its
+dedicated browser loads the extension automatically, without selecting a folder.
+
 ## Installation
 
 1. Run `npm run build:chrome` from the project root.

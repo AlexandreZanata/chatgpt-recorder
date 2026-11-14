@@ -97,6 +97,8 @@ class AccountStore:
             os.close(descriptor)
 
     def create(self, identifier: str, label: str) -> dict:
+        from . import browser_install
+
         if (
             not IDENTIFIER.fullmatch(identifier)
             or identifier == "legacy"
@@ -115,6 +117,7 @@ class AccountStore:
                 "id": identifier,
                 "label": label.strip(),
                 "cdp_port": port,
+                "browser_mode": "managed" if browser_install.managed_executable() else "system",
             }
         private_directory(self.profile(identifier))
         return self.account(identifier)
@@ -137,7 +140,20 @@ class AccountStore:
                 if config.LEGACY_PROFILE.is_dir()
                 else config.DATA / "profile"
             )
-        return self.root / "browser" / identifier
+        directory = "browser-managed" if self.account(identifier).get("browser_mode") == "managed" else "browser"
+        return self.root / directory / identifier
+
+    def use_managed_browser(self, identifier: str) -> None:
+        from . import browser_install
+
+        if identifier == "legacy":
+            raise ValueError("add a named account for automatic browser setup; legacy sessions stay unchanged")
+        self.account(identifier)
+        if not browser_install.managed_executable():
+            raise ValueError("run bash scripts/install-linux.sh first")
+        with self.transaction() as data:
+            data["accounts"][identifier]["browser_mode"] = "managed"
+        private_directory(self.profile(identifier))
 
     def public_accounts(self) -> list[dict]:
         records = [self.account("legacy"), *self.load()["accounts"].values()]
@@ -173,6 +189,7 @@ class AccountStore:
         config.PROFILE = self.profile(identifier)
         config.CDP_PORT = account["cdp_port"]
         config.ACCOUNT_ID = identifier
+        config.BROWSER_MODE = account.get("browser_mode", "system")
 
     @contextlib.contextmanager
     def profile_lock(self, identifier: str):

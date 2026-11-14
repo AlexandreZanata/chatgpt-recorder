@@ -6,10 +6,13 @@ The existing video-generation controls and upload pipeline are retained.
 
 ## Browser connection
 
-Create a short lowercase account ID and label. Click **Abrir janela para conectar
-Google / Studio**. This opens ordinary Chrome/Chromium using only that dedicated profile.
+Create a short lowercase account ID and label. Click **Conectar
+Google / YouTube e ChatGPT**. This opens both sites in a normal visible browser using only
+that dedicated profile. [The assisted installer](INSTALL-LINUX.md) prepares a managed browser
+that loads the capture extension automatically; existing system-browser setup remains supported.
 Complete Google and, for article/audio generation, ChatGPT sign-in yourself. Close the
-browser window before running a batch. The account lock prevents a new managed batch
+browser window before running a batch. Use **Verificar conexão completa** to check the
+selected channel, capture extension and ChatGPT session; no content is generated. The account lock prevents a new managed batch
 from competing with interactive sign-in. No passwords, challenge bypass or embedded
 Google webview are implemented.
 
@@ -60,6 +63,8 @@ profile is never an automatic cleanup action. Existing browser profiles/media ar
 
 - `.local/accounts/registry.json`: account labels, allocated CDP ports, explicit channel bindings.
 - `.local/accounts/browser/<account-id>/`: dedicated browser profile, mode 0700.
+- `.local/accounts/browser-managed/<account-id>/`: automatic-extension profile; original
+  system-browser profiles remain separate when switching. A fresh login is required.
 - `.local/accounts/oauth/<account-id>.json`: optional tokens/client settings, mode 0600.
 - `.local/accounts/locks/`: mutual exclusion for interactive access and batches.
 - Legacy profile: `.local/bot/profile` when present, otherwise `.local/ytbot/profile`.

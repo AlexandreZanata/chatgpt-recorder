@@ -11,7 +11,7 @@ import subprocess
 import time
 import urllib.request
 from pathlib import Path
-from . import config
+from . import browser_install, config
 
 
 def log(message: str) -> None:
@@ -124,7 +124,7 @@ def ensure_xvfb() -> None:
 
 def _chrome_env() -> dict:
     return dict(
-        os.environ,
+        browser_install.environment(),
         DISPLAY=config.DISPLAY,
         WAYLAND_DISPLAY="",
         XDG_RUNTIME_DIR=os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"),
@@ -137,7 +137,8 @@ def start_hidden_chrome() -> None:
         return
     subprocess.Popen(
         [
-            "/usr/bin/google-chrome",
+            browser_install.executable(),
+            *browser_install.arguments(),
             "--ozone-platform=x11",
             f"--user-data-dir={config.PROFILE}",
             "--profile-directory=Default",
@@ -157,51 +158,6 @@ def start_hidden_chrome() -> None:
         if chrome_running():
             return
     raise RuntimeError("hidden Chrome did not start")
-
-
-def _chrome_time() -> str:
-    return str(int((time.time() + 11644473600) * 1_000_000))
-
-
-def _extension_entry() -> dict:
-    permissions = ["activeTab", "downloads", "storage", "tabCapture", "offscreen"]
-    host = "https://chatgpt.com/*"
-    return {
-        "account_extension_type": 0,
-        "active_permissions": {
-            "api": permissions,
-            "explicit_host": [host],
-            "manifest_permissions": [],
-            "scriptable_host": [host],
-        },
-        "commands": {"_execute_action": {"suggested_key": "Ctrl+Shift+U"}},
-        "content_settings": [],
-        "creation_flags": 0,
-        "disable_reasons": [],
-        "first_install_time": _chrome_time(),
-        "from_webstore": False,
-        "granted_permissions": {
-            "api": permissions,
-            "explicit_host": [host],
-            "manifest_permissions": [],
-            "scriptable_host": [host],
-        },
-        "has_started_service_worker": True,
-        "incognito_content_settings": [],
-        "incognito_preferences": {},
-        "last_update_time": _chrome_time(),
-        "location": 4,
-        "newAllowFileAccess": True,
-        "path": str(config.EXT_PATH),
-        "preferences": {},
-        "regular_only_preferences": {},
-        "service_worker_registration_info": {"version": "0.1.0"},
-        "serviceworkerevents": ["downloads.onChanged"],
-        "was_installed_by_default": False,
-        "was_installed_by_oem": False,
-        "was_pinned_by_default": True,
-        "withholding_permissions": False,
-    }
 
 
 def _copy_cookies() -> None:
@@ -228,10 +184,11 @@ def _write_preferences() -> None:
     else:
         data = {}
     data.setdefault("extensions", {}).setdefault("ui", {})["developer_mode"] = True
-    data["extensions"].setdefault("settings", {})[config.EXT_ID] = _extension_entry()
+    # Extension registration belongs to Chrome. Replacing it loses persisted state.
     data.setdefault("download", {})["default_directory"] = str(config.DOWNLOADS)
     data["download"]["prompt_for_download"] = False
     prefs_path.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+    prefs_path.chmod(0o600)
 
 
 def setup_profile() -> None:
@@ -302,9 +259,11 @@ def launch_upload_context(playwright):
         try:
             return playwright.chromium.launch_persistent_context(
                 str(config.PROFILE),
-                executable_path="/usr/bin/google-chrome",
+                executable_path=browser_install.executable(),
+                chromium_sandbox=True,
                 headless=False,
                 args=[
+                    *browser_install.arguments(),
                     "--ozone-platform=x11",
                     "--profile-directory=Default",
                     "--no-first-run",
@@ -312,7 +271,7 @@ def launch_upload_context(playwright):
                     "--window-position=0,0",
                     "--window-size=1600,1000",
                 ],
-                ignore_default_args=["--password-store=basic", "--use-mock-keychain"],
+                ignore_default_args=["--password-store=basic", "--use-mock-keychain", "--disable-extensions"],
                 env=_chrome_env(),
                 accept_downloads=True,
             )
