@@ -12,6 +12,6 @@ mkdir -p "$DIST_DIR"
 rm -f "$ZIP_FILE"
 
 echo "[package] Creating extension distribution package: $ZIP_FILE"
-zip -r "$ZIP_FILE" manifest.json popup.html src/ icons/ README.md >/dev/null
+zip -r "$ZIP_FILE" manifest.json popup.html src/ icons/ README.md -x "*/__pycache__/*" "*.pyc" >/dev/null
 
 echo "[package] OK — Package created at $ZIP_FILE"

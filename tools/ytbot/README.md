@@ -38,6 +38,15 @@ The agent can run that command in the background and only intervene if the bot
 reports a failure. A successful run ends with `[ytbot] process finished` and the
 batch summary. Failures are recorded and the command exits non-zero.
 
+## Account selection
+
+Open the additive account/channel manager with `python3 -m tools.ytbot accounts ui`.
+Use a dedicated visible browser to connect each account, then bind the exact intended
+channel. `run --account <id>` explicitly selects an account; without it, the channel
+binding or existing legacy session is used. Original prompts/media/scheduling stay the
+same. Read [account setup](../../docs/ACCOUNTS.md) and
+[ZaturoBot service](../../docs/SERVICE.md) for typed remote-job integration.
+
 ## First-time setup
 
 ```bash

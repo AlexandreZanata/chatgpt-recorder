@@ -1,102 +1,86 @@
-# ChatGPT Audio Capture — Firefox Extension (MV3)
+# YoutubeBot
 
-A high-performance Firefox extension (Manifest V3) designed to automatically capture and save text-to-speech (TTS) audio generated on `chatgpt.com` directly to your local machine in real-time.
+A local Linux video workflow with three existing surfaces: the Firefox/Chrome ChatGPT
+audio-capture extension, the Python/PySide6 video studio, and the resumable YouTube
+production/upload/scheduling bot. Extension behavior, video engines, voices, prompts,
+subtitles, metadata, end screens and scheduling stay unchanged. The account manager and
+ZaturoBot adapter are additive.
 
----
+For coding agents: start with [AGENTS.md](AGENTS.md), then [the component map](docs/ARCHITECTURE.md).
+There is no agent harness, dynamic rule tree or required Git-hook framework.
 
-## 🌟 Key Features
+## Existing workflows
 
-- **Multi-Layer Audio Interception**:
-  1. **Network Interception**: Intercepts raw audio stream chunks via `webRequest.filterResponseData()`.
-  2. **WebAudio API Hooking**: Taps into `AudioDestinationNode` connections (`AudioNode.prototype.connect`) to capture WebSocket speech streams.
-  3. **MediaElement Capture**: Automatically captures `<audio>` streams using `captureStream()` or blob fetching.
-  4. **Main-World Fetch Cloning**: Clones audio response payloads in page context.
-- **Zero-Latency Downloads**: Saves audio files instantly without re-encoding delays.
-- **Dynamic File Naming & Templates**: Fully customizable templates supporting `{prefix}`, `{date}`, `{time}`, and `{title}` variables (e.g. `chatgpt-tts_2026-08-11_my-chat.mp3`).
-- **Interactive Popup UI**: Modern glassmorphism UI displaying real-time status badges, recent capture history, preview audio player, and settings export/import.
-- **Quality Gate Enforced**: 100% compliant with strict code quality limits (file ≤200 lines, function ≤80 lines, cyclomatic complexity ≤10).
+Firefox: load `manifest.json` from `about:debugging#/runtime/this-firefox`.
+Chrome: `npm ci && npm run build:chrome`, then load `dist/chrome` as an unpacked extension.
+Read [the Chrome guide](docs/CHROME-EXTENSION.md) and [extension user guide](docs/USER-GUIDE.md).
 
----
-
-## 🚀 Quick Installation Guide (Firefox)
-
-1. Clone or download this repository.
-2. Open Firefox and navigate to:
-   ```text
-   about:debugging#/runtime/this-firefox
-   ```
-3. Click **Load Temporary Add-on...**.
-4. Select `manifest.json` from the repository root directory.
-5. Open [chatgpt.com](https://chatgpt.com) and click **"Read Aloud"** on any response. Audio will download automatically to your default `Downloads` folder!
-
----
-
-## ⚙️ Build & Quality Verification
-
-### Google Chrome version
-
-Run `npm run build:chrome`, then open `chrome://extensions`, enable
-**Developer mode**, click **Load unpacked**, and select `dist/chrome`.
-Reload existing ChatGPT tabs before using Read aloud.
-The Chrome build preserves the popup/settings and uses Chrome-compatible
-audio capture. Firefox's manifest and response filter remain unchanged.
-See [the Chrome guide](docs/CHROME-EXTENSION.md) for details and limitations.
-
-To verify code quality and generate the production distribution archive:
+Video studio: install the tested Python desktop dependencies in your own virtualenv,
+then run `python app_desktop.py` or `bash scripts/launch-desktop-app.sh`. Existing Classic,
+Auto AI Story, narration, subtitles, background and rendering controls remain available.
+See [video modes](docs/STANDARD-MODE.md) and [local narration](docs/LOCAL-NARRATION.md).
+Optional GPU/model engines retain their existing setup; dependencies/caches are not
+silently substituted with another model or voice.
 
 ```bash
-# Verify code quality gates (Size/Complexity, Lint, System, Tests, Package Integrity)
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-desktop.txt
+.venv/bin/python app_desktop.py
+```
+
+YouTube production keeps its existing command and channel-specific behavior:
+
+```bash
+python3 -m tools.ytbot run --channel fallem-prince --count 1
+python3 -m tools.ytbot catalog --channel whispers-from-heaven
+python3 -m tools.ytbot check "An exact topic" --channel zaflas
+```
+
+A channel is always explicit. Uploads remain scheduled, never immediately public, with
+the existing 00:00/12:00 slots, audience policy, thumbnail and end-screen elements.
+Read [the full pipeline](tools/ytbot/README.md) before running real production.
+
+## Accounts, channels and video history
+
+Click **Contas e canais do YouTube** in the existing video studio, or run:
+
+```bash
+python3 -m tools.ytbot accounts ui
+python3 -m tools.ytbot accounts add --id work --label "Work account"
+python3 -m tools.ytbot accounts connect --account work
+python3 -m tools.ytbot accounts bind --account work --channel fallem-prince --verify-browser
+python3 -m tools.ytbot run --channel fallem-prince --account work --count 1
+```
+
+Sign in yourself in the visible dedicated browser, then close that browser before
+starting a batch. Each account has a private separate profile. The window groups channels,
+video titles, schedules and run history without renaming original media or rewriting the
+pipeline. A selected channel must match its actual YouTube ID; a matching name is not enough.
+Optional read-only OAuth discovers channel identity using a Google Desktop client and
+system-browser consent with PKCE/state. It does not replace the existing Studio uploader.
+See [account setup](docs/ACCOUNTS.md).
+
+## ZaturoBot service and private migration
+
+`python3 -m tools.ytbot.service capabilities` exposes the bounded local adapter.
+Reads return channel profiles and local run summaries. Explicit scheduled-batch requests
+are durable/idempotent jobs; acceptance is not completion. Status polling reports actual
+completion/evidence or uncertainty without repeating an unknown upload. No raw shell,
+Google token or browser cookie is exposed. See [service contracts](docs/SERVICE.md).
+
+Private `.local/` state and ignored media must travel encrypted outside Git. Preserve
+original files, keep account/browser state private and reauthenticate on the destination
+when the OS keyring differs. Rebuild dependencies/model caches rather than copying a
+virtualenv. See [migration](docs/MIGRATION.md).
+
+## Verify
+
+```bash
+npm ci
 npm run verify
-
-# Build distribution ZIP package
-npm run build
-```
-The output package will be generated at `dist/chatgpt-audio-capture-v0.1.0.zip`.
-
----
-
-## 📄 Technical Architecture
-
-### Desktop text-to-speech narration
-
-The video desktop app supports pasted narration text with the fixed Uncle_Fu voice,
-fixed English narration and recognition, short voice auditions, and full WAV generation
-in both video modes. Existing audio-file input remains available.
-Classic mode, text narration, and subtitles are enabled on launch. Long Classic
-exports use bounded four-worker rendering. The Base narrator builds one full acoustic
-prompt from the approved original Uncle_Fu sample and reuses it for every passage.
-Eligible 0.6B narration uses CUDA graphs and a fixed seed, without changing the voice
-reference or applying free-form delivery overrides. Subtitle/encoding quality settings
-are preserved; GPU fallbacks keep the same Base model and reference, never another preset.
-Run `bash scripts/setup-local-tts.sh` once to install the isolated speech engine,
-then restart the desktop app and use **Test voice** or **Generate full narration**.
-The first voice test downloads Base model weights; Qwen3-TTS Base 0.6B with Uncle_Fu is the
-user-selected default and the only selectable voice. The 1.7B model remains optional.
-See [local narration setup and limitations](docs/LOCAL-NARRATION.md).
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  chatgpt.com (Firefox Tab)                                  │
-│                                                             │
-│  ┌───────────────────────┐   postMessage   ┌──────────────┐ │
-│  │ page-injector.js      │────────────────▶│ content-     │ │
-│  │ (WebAudio / Fetch /   │                 │ script.js    │ │
-│  │  HTMLAudioElement)    │                 └──────┬───────┘ │
-│  └───────────────────────┘                        │         │
-└───────────────────────────────────────────────────┼─────────┘
-                                                    ▼ sendMessage
-                              ┌───────────────────────────────┐
-                              │ background.js                 │
-                              │ - webRequest.filterResponseData
-                              │ - Filename Template Engine    │
-                              │ - browser.downloads.download()│
-                              └───────────────────────────────┘
 ```
 
-For detailed user instructions and configuration guide, see [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md).
-
----
-
-## 📜 License
-
-Apache 2.0 License.
+This runs strict extension lint, Python compilation, existing/new Node and Python tests,
+both extension packaging checks and a Git-visible private-path/key guard. Tests use fake
+accounts and never publish videos or contact live Google services. GPU/model/physical
+Google sign-in acceptance is separate from hermetic tests. See [verification](docs/VERIFICATION.md).

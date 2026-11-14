@@ -1,202 +1,40 @@
-# AGENTS.md — professional-pdf-generator
+# YoutubeBot agent guide
 
-> **Read this first** in any new agent session (Cursor, Claude Code, Codex, etc.).
+This is YoutubeBot: a Firefox/Chrome audio-capture extension, Python/PySide6 video
+studio, and resumable Playwright YouTube production/scheduled-upload pipeline.
+Read [the component map](docs/ARCHITECTURE.md), then only the relevant module and tests.
+English in code, comments, documentation and commits; user-facing UI may use Portuguese.
 
-**Language:** 100% English — code, comments, docs, commits, and all agent output.
+## Preserve existing behavior
 
----
+- Extension capture, filename templates and download behavior stay unchanged.
+- Keep the existing generation modes, narration, voices, subtitles, backgrounds and rendering.
+- `tools/ytbot` keeps channel prompts, deduplication, resumable stage records and sequential
+  upload/scheduling. Existing profiles are `fallem-prince`, `whispers-from-heaven`, `zaflas`.
+- Require an explicit channel. Verify its YouTube channel ID before mutating Studio.
+- Schedule only: 00:00/12:00 slots in America/Cuiaba, at least 60 minutes ahead,
+  not made for kids, custom thumbnail and Subscribe + Best for viewer end screen.
+- Preserve channel-specific title/description/tags rules and media quality.
+- Never blindly retry an uncertain upload or start the same service operation twice.
 
-## What this repo is
+## Boundaries
 
-Secure Document Vault (v2): FastAPI + WeasyPrint PDFs, encrypted SQLite vault,
-session + TOTP, optional PAdES. Agent Harness + Lefthook quality gates.
+Accounts, browser profiles, OAuth tokens, generated media, model caches and run history
+are private `.local/` state. Never log tokens/cookies or put them in Git. Google sign-in
+uses the owner's visible browser and consent; do not bypass challenges or copy another
+profile while in use. Browser automation remains the upload path; optional OAuth only
+helps discover and verify account/channel identity. Never silently switch channels.
 
-| Is | Is not |
-|----|--------|
-| Agent Harness rules + Cursor entry points | Permission to skip hooks |
-| Lefthook quality gates (local commit block) | Place to commit `.local/` plans |
-| Gitignored `.local/` task workspace | License to tick release DoD without evidence |
+The service CLI is typed and bounded. Never expose a general shell, arbitrary subprocess
+arguments or account secrets to ZaturoBot. Real generation/upload/Google consent tests
+are opt-in; CI uses fixtures. Read [accounts](docs/ACCOUNTS.md), [service](docs/SERVICE.md)
+and [migration](docs/MIGRATION.md) for those operations.
 
-**v2 docs (read these):** [docs/HANDOVER.md](docs/HANDOVER.md) ·
-[docs/OPEN-ITEMS.md](docs/OPEN-ITEMS.md) · [docs/RELEASE-NOTES-v2.md](docs/RELEASE-NOTES-v2.md) ·
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+## Verify and hand off
 
-**Current phase:** see `.local/README.md` (gitignored). Do not tag `v2.0.0` while
-OPEN-ITEMS blockers remain.
-
----
-
-## YouTube automation bot (`tools/ytbot`)
-
-Local, hidden pipeline for the **fallem prince** channel. It generates the article
-in the Simple Deep Dive GPT, captures Read aloud audio, generates metadata and the
-Black Ink Void thumbnail, renders the video (Fallem Prince background, no music,
-quick outro, subtitles), uploads a draft, adds the Subscribe + Best for viewer end
-screen and **schedules** it. It never publishes immediately and never opens
-windows in the main desktop workspace.
-
-**Single command**
-
-```bash
-python3 -m tools.ytbot run --channel fallem-prince --count N
-```
-
-`--channel` is required. If the user asks for videos without naming a channel,
-ask **"Para qual canal os vídeos?"** before running.
-
-Rules enforced by code:
-
-- 2 videos/day at **00:00** and **12:00**, 12 hours apart.
-- If one slot is already scheduled that day, use the missing slot; if both are
-  taken, move to the next day. Existing slots come from YouTube Studio
-  `list_creator_videos`; start at least 60 minutes in the future.
-- Always **"not made for kids"**.
-- Description follows the existing channel format: paragraphs, hashtags, then the
-  `TAGS:` line. Tags also go in the tags field, comma separated and within the
-  YouTube character budget.
-- Never add em dash (`—`) or en dash (`–`) to topics, titles, descriptions, tags
-  or article text.
-- End screen always includes **Inscrever-se** and a Video element set to
-  **Melhor para o espectador** (YouTube chooses the best video).
-- Every stage is recorded in `.local/ytbot/records/records.jsonl`,
-  `.local/ytbot/records/RECORDS.md` and `.local/ytbot/runs/<slug>/record.json`.
-
-### Channel profiles
-
-| Profile | Channel | Style |
-|---------|---------|-------|
-| `fallem-prince` | fallem prince | English psychology/philosophy essays, 35–80 min, Black Ink Void thumbnails, `fallem_prince` background. |
-| `whispers-from-heaven` | Whispers From Heaven | English Christian biblical story narrations, 14–22 min, Sacred Brown Engraving thumbnails, `whispers_from_heaven` background. |
-
-Per-channel prompts live in `tools/ytbot/prompts/<profile>/`. Per-channel data
-(runs, catalog, topics, records) lives in `.local/ytbot/channels/<slug>/`; the
-legacy `fallem-prince` data stays at `.local/ytbot/`.
-
-The bot switches the active Studio channel through the YouTube account switcher
-before every batch. If the profile channel is not listed, stop and ask the user
-to sign in to the right Google account or create/add the channel. Never guess.
-
-Runtime and data:
-
-- Hidden Chrome runs on Xvfb `:99`, CDP port `9300`, using the already signed-in
-  profile at `.local/bot/profile` (gitignored). Do not touch the normal Chrome
-  profile.
-- `python3 -m tools.ytbot setup` prepares/uses the profile.
-- Topic queue: `.local/ytbot/topics.txt`. If it has fewer topics than `--count`,
-  the bot asks ChatGPT for new topics and filters them against the catalog.
-- Catalog: `.local/ytbot/catalog.json` (refresh with
-  `python3 -m tools.ytbot catalog`); duplicate check:
-  `python3 -m tools.ytbot check "topic"`.
-- Speed: article generation and Read aloud capture run in parallel with one tab
-  per video (N videos = N tabs); each audio download is matched to its run by
-  the tab URL stored in the extension history. Rendering and uploads stay
-  serialized. Use `--parallel N` to override the tab count (0 = one per video),
-  and `--upload-cdp <port>` when the signed-in main profile runs on Xvfb.
-- Full process map: `tools/ytbot/README.md`.
-
-If an upload opens the Google account chooser, the bot profile session expired:
-sign in once in `.local/bot/profile`, or finish the uploads with the already
-signed-in main Chrome profile launched on Xvfb. Do not use the main profile while
-the normal Chrome is open.
-
-Agent workflow for **"faça N vídeos e poste"**:
-
-1. Run the command detached:
-   `setsid python3 -m tools.ytbot run --channel <profile> --count N > /tmp/ytbot-run.log 2>&1 < /dev/null &`
-2. Poll the log and `.local/ytbot/records/records.jsonl`.
-3. Intervene only if the process exits non-zero or a stage is recorded as
-   `error`. Completed stages are resumable.
-4. Report the final summary and scheduled slots. Do not publish manually.
-
-Verification: `python3 -m unittest tests.test_ytbot_logic` and the size/complexity
-gate on the new files.
-
-**Always push bot fixes:** every small behavior fix to `tools/ytbot` (or to the
-capture extension used by it) must be committed and pushed to GitHub
-(`origin main`) in the same task, after the quality gates pass. Never include
-`.local/`, generated `.pyc` files or unrelated workspace files in that commit.
-
-When rules conflict with existing code, **rules prevail** — unless the user explicitly overrides for a task.
-
----
-
-## Rules path (resolve first)
-
-```bash
-pip install -r agent-harness/requirements.txt   # once per machine
-./agent-harness/rules-path.sh                   # → agent-rules/
-./agent-harness/resolve-rules.sh <keywords>
-```
-
-Config: `agent-harness/harness.config.yaml` → `rules_dir: agent-rules`.
-
-### Always load (base context)
-
-1. `agent-rules/AGENT-CORE-PRINCIPLES.md`
-2. `agent-rules/00-core/size-and-complexity-limits.md` — **80 lines/function, 200 lines/file, cyclomatic ≤10**
-3. `agent-rules/04-testing/contract-first-tests.md` — before ANY test
-4. `agent-rules/09-ai-agent-specific/token-economy.md`
-5. `agent-rules/09-ai-agent-specific/anti-hallucination.md`
-
-Cursor: `.cursor/rules/*.mdc` applies automatically (incl. Ponytail YAGNI + `quality-gates.mdc`).
-
-### Conditional load
-
-```bash
-./agent-harness/resolve-rules.sh <keywords from task>
-./agent-harness/generate-task-rules.sh <keywords>
-./agent-harness/generate-task-rules.sh --clean
-```
-
-Load **2–6** task files only — not the entire tree.
-
----
-
-## Quality gates (Lefthook — blocks commit)
-
-Every commit (local included) MUST pass:
-
-| Gate | Cap |
-|------|-----|
-| File lines | ≤ **200** |
-| Function / method lines | ≤ **80** |
-| Cyclomatic complexity | ≤ **10** |
-| Lint | **0 errors, 0 warnings** |
-| Compile / system check | **0 errors** when tooling exists |
-
-```bash
-lefthook install            # wire git hooks (CLI on PATH)
-npm run verify              # run all gates manually
-npm run hooks:install       # same as lefthook install
-```
-
-Details: [docs/QUALITY-GATES.md](docs/QUALITY-GATES.md).
-
-**Never** use `--no-verify` unless the user explicitly asks.
-
----
-
-## Local workspace (gitignored)
-
-Implementation plans live in `.local/` and **must not** be committed.
-
-| Path | Purpose |
-|------|---------|
-| `.local/README.md` | Index of phases |
-| `.local/IMPLEMENTATION-PLAN.md` | Master roadmap |
-| `.local/phases/<id>/` | Per-task: `README.md`, `TASKS.md`, `OFFICIAL-REFERENCE.md` |
-| `.local/reference/` | Cached official links for agents |
-| `.local/overrides/` | Optional local rule overrides |
-| `.local/tmp/` | Scratch notes |
-
-Pattern: small steps + validation commands in `TASKS.md`; cite official URLs in `OFFICIAL-REFERENCE.md`.
-
----
-
-## Before coding
-
-1. Read [docs/OPEN-ITEMS.md](docs/OPEN-ITEMS.md) and the current `.local/phases/*` README.
-2. Complete [docs/NEW-PROJECT-CHECKLIST.md](docs/NEW-PROJECT-CHECKLIST.md) when starting greenfield work.
-3. Resolve harness rules for the task keywords (`./agent-harness/resolve-rules.sh …`).
-4. Implement in small steps; run `npm run verify` after each block.
-5. Release gate evidence lives under `docs/evidence/release-v2/`.
+Use `npm ci`, then `npm run verify` (extension lint/build/package + Node/Python tests).
+Keep tests behavioral. Run the smallest useful command during development and the complete
+gate before publication. Report actual checks and remaining physical-account/GPU limits.
+No harness, dynamic rule resolver or hook framework is required. Keep docs concise and
+canonical: README for commands, architecture for ownership, topic docs for contracts.
+Never delete the owner's original local media, browser state, credentials or unrelated repos.

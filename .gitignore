@@ -46,3 +46,13 @@ video/*
 !assets/backgrounds/whispers_from_heaven_shorts.mp4
 *.wav
 !assets/voices/Uncle_Fu-reference.wav
+
+# Local account and environment credentials
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+credentials.json
+token.json
+*.client-secret.json

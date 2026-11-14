@@ -6,7 +6,6 @@ import argparse
 import json
 
 from . import catalog, channels, config, logic, runtime
-from .batch import run_batch
 
 
 def command_setup(_args) -> None:
@@ -46,7 +45,13 @@ def command_check(args) -> None:
 
 def command_run(args) -> None:
     channels.apply(args.channel)
-    failures = run_batch(args.count, args.parallel, args.upload_cdp or None)
+    from .batch import run_batch
+    from .account_commands import apply_bound_account
+    from .accounts_store import AccountStore
+    selected = apply_bound_account(args.channel, args.account)
+    from .service_jobs import channel_lock
+    with AccountStore().profile_lock(selected), channel_lock(args.channel):
+        failures = run_batch(args.count, args.parallel, args.upload_cdp or None)
     print("[ytbot] process finished")
     if failures:
         raise SystemExit(1)
@@ -67,10 +72,13 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--channel", choices=sorted(channels.CHANNELS), required=True,
                      help="channel profile; ask the user when it is not specified")
     run.add_argument("--count", type=int, default=1)
+    run.add_argument("--account", default=None, help="explicit registered browser account (otherwise the channel binding or legacy session)")
     run.add_argument("--parallel", type=int, default=0,
                      help="tabs used for article and audio stages (0 = one per video)")
     run.add_argument("--upload-cdp", type=int, default=0)
     run.set_defaults(func=command_run)
+    from .account_commands import add_parser
+    add_parser(sub)
     return parser
 
 

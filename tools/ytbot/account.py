@@ -22,6 +22,16 @@ def ensure_channel(context, name: str | None = None) -> None:
             "()=>document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(e=>e.remove())")
         page.locator("#avatar-btn").click()
         page.wait_for_timeout(2000)
+        active = page.evaluate(
+            "()=>document.querySelector('ytd-active-account-header-renderer #account-name')"
+            "?.innerText?.trim() || ''")
+        if active == name:
+            page.keyboard.press("Escape")
+            page.goto("https://studio.youtube.com/", timeout=90000)
+            page.wait_for_timeout(7000)
+            verify_channel_identity(page.url, config.CHANNEL_ID)
+            log(f"active channel: {name}")
+            return
         switcher = None
         for label in ("Mudar de conta", "Switch account"):
             locator = page.get_by_text(label, exact=True)
@@ -40,9 +50,10 @@ def ensure_channel(context, name: str | None = None) -> None:
         page.wait_for_timeout(9000)
         match = re.search(r"studio\.youtube\.com/channel/(UC[\w-]+)", page.url)
         if match:
-            config.set_channel_id(match.group(1))
+            verify_channel_identity(page.url, config.CHANNEL_ID)
             page.goto(config.STUDIO_UPLOAD, timeout=90000)
             page.wait_for_timeout(7000)
+        verify_channel_identity(page.url, config.CHANNEL_ID)
         body = page.locator("body").inner_text()
         if name not in body:
             raise RuntimeError(
@@ -50,3 +61,11 @@ def ensure_channel(context, name: str | None = None) -> None:
         log(f"active channel: {name}")
     finally:
         page.close()
+
+
+def verify_channel_identity(url: str, expected: str) -> str:
+    """A matching display name alone never authorizes an upload to another channel."""
+    match = re.search(r"^https://studio\.youtube\.com/channel/(UC[\w-]+)(?:[/?#]|$)", url)
+    if match is None or match.group(1) != expected:
+        raise RuntimeError("YouTube channel identity mismatch; select the intended channel in this account")
+    return match.group(1)

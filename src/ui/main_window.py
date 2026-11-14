@@ -45,6 +45,9 @@ class VideoGeneratorApp(VideoGeneratorActions, QMainWindow):
         self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
         header_form.addRow("🎯 Modo de Produção:", self.mode_combo)
         layout.addLayout(header_form)
+        accounts_button = QPushButton("Contas e canais do YouTube")
+        accounts_button.clicked.connect(self.open_accounts)
+        layout.addWidget(accounts_button)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -81,6 +84,11 @@ class VideoGeneratorApp(VideoGeneratorActions, QMainWindow):
         self.btn_render.clicked.connect(self.start_rendering)
         layout.addWidget(self.btn_render)
         self.mode_combo.setCurrentIndex(0)
+
+    def open_accounts(self):
+        from src.ui.accounts_window import AccountsWindow
+        self.accounts_window = AccountsWindow(self)
+        self.accounts_window.show()
 
     def _build_classic_widget(self):
         w = QWidget()

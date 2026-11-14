@@ -1,7 +1,7 @@
 {
   "name": "chatgpt-recorder",
   "version": "0.1.0",
-  "description": "ChatGPT Audio Capture Firefox Extension (MV3)",
+  "description": "YouTube video generation, capture extension and scheduled-upload automation",
   "type": "module",
   "scripts": {
     "verify": "bash scripts/check-quality.sh",
@@ -13,7 +13,6 @@
   },
   "devDependencies": {
     "eslint": "^9.0.0",
-    "lefthook": "^1.6.0",
     "web-ext": "^10.6.0"
   }
 }
