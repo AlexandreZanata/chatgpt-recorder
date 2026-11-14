@@ -12,14 +12,16 @@ adds an account-management button. Runtime/account changes add portability, expl
 profile isolation and exact channel identity checks; ordinary existing `run` commands
 retain the legacy account by default unless an explicit binding/account is selected.
 
-Local verification passed the complete existing and new suites: 148 Python tests and
+Local verification passed the complete existing and new suites: 153 Python tests and
 30 Node extension tests, strict extension lint and both distribution packages. New
 behavioral tests cover independent accounts, private modes/symlinks, competing ownership,
 exact channel ID, process-profile prefixes/CDP conflicts, existing preferences, title/run
 index, OAuth PKCE/state/loopback/readonly scope, durable/concurrent idempotent submission,
 permission denials, actual fake-actor lifecycle, missing scheduled evidence and lost-actor
 uncertainty, bounded separate systemd units, clean actor environments and missing-manager
-denial. OAuth tests use synthetic values and a loopback fixture; no Google account
+denial. Global media admission tests cover competing accounts/channels, terminal actors
+still alive, missing manager evidence, upgrade reconciliation and a superseded late launcher.
+OAuth tests use synthetic values and a loopback fixture; no Google account
 or real upload is used. The account window was rendered offscreen with all three profiles; a Qt interaction
 test verifies account creation, case-insensitive title search and read-only history.
 

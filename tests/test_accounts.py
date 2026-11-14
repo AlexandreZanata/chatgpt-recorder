@@ -286,6 +286,7 @@ class ServiceContracts(AccountFixture):
             "count": 1,
             "approved_schedule": True,
             "store": self.store,
+            "unit_probe": lambda _operation: False,
             **changes,
         }
         return service_jobs.submit(**kwargs)
@@ -316,6 +317,87 @@ class ServiceContracts(AccountFixture):
             results = list(pool.map(lambda _: submit(), range(4)))
         self.assertEqual(len(launches), 1)
         self.assertTrue(all(r["state"] == "accepted" for r in results))
+
+    def test_different_accounts_and_channels_share_one_atomic_host_admission(self):
+        self.store.create("personal", "Personal")
+        barrier = threading.Barrier(2)
+        launches = []
+
+        def submit(pair):
+            barrier.wait()
+            try:
+                return self.submit(
+                    account=pair[0], channel=pair[1],
+                    launcher=lambda *_a, **_k: launches.append(1),
+                )["state"]
+            except service_jobs.CapacityReached:
+                return "busy"
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(submit, [
+                ("work", "fallem-prince"), ("personal", "zaflas"),
+            ]))
+        self.assertCountEqual(results, ["accepted", "busy"])
+        self.assertEqual(len(launches), 1)
+        jobs = [p for p in service_jobs.jobs_root().glob("*.json") if p.name != "active-job.json"]
+        self.assertEqual(len(jobs), 1, "busy admission creates no waiting actor or job")
+
+    def test_capacity_requires_real_actor_and_unit_exit_and_fences_late_launch(self):
+        operation = str(uuid.uuid4())
+        self.submit(operation, launcher=lambda *_a, **_k: None)
+        path = service_jobs.jobs_root() / (operation + ".json")
+        record = read_private(path)
+        record["created_at"] -= 60
+        write_private(path, record)
+        for state in [True, None]:
+            with self.assertRaises(service_jobs.CapacityReached):
+                self.submit(launcher=Mock(), unit_probe=lambda _id: state)
+        next_job = self.submit(launcher=lambda *_a, **_k: None)
+        service_jobs.execute(operation)
+        self.assertEqual(service_jobs.status(operation)["state"], "failed")
+        self.assertFalse((service_jobs.jobs_root() / (operation + ".execution")).exists())
+        self.assertEqual(service_jobs.status(next_job["operation_id"])["state"], "accepted")
+
+    def test_terminal_job_does_not_release_capacity_before_process_exit(self):
+        import os
+
+        operation = str(uuid.uuid4())
+        self.submit(operation, launcher=lambda *_a, **_k: None)
+        path = service_jobs.jobs_root() / (operation + ".json")
+        record = read_private(path)
+        record.update(state="completed", pid=os.getpid(), process_identity=service_jobs.process_identity(os.getpid()))
+        write_private(path, record)
+        actor = Mock()
+        with self.assertRaises(service_jobs.CapacityReached):
+            self.submit(launcher=actor)
+        actor.assert_not_called()
+        with patch.object(service_jobs, "process_identity", return_value=None):
+            self.assertEqual(self.submit(launcher=lambda *_a, **_k: None)["state"], "accepted")
+
+    def test_unit_liveness_requires_positive_systemd_evidence(self):
+        import subprocess
+
+        operation = str(uuid.uuid4())
+        for output, expected in [
+            ("LoadState=loaded\nActiveState=active\n", True),
+            ("LoadState=loaded\nActiveState=deactivating\n", True),
+            ("LoadState=not-found\nActiveState=inactive\n", False),
+            ("", None),
+        ]:
+            with patch.object(
+                service_jobs.subprocess, "run",
+                return_value=subprocess.CompletedProcess([], 0, stdout=output),
+            ):
+                self.assertIs(service_jobs.unit_active(operation), expected)
+
+    def test_missing_capacity_gate_during_upgrade_checks_old_admissions(self):
+        operation = str(uuid.uuid4())
+        self.submit(operation, launcher=lambda *_a, **_k: None)
+        (service_jobs.jobs_root() / "active-job.json").unlink()
+        actor = Mock()
+        with self.assertRaises(service_jobs.CapacityReached):
+            self.submit(launcher=actor)
+        actor.assert_not_called()
 
     def test_unapproved_or_invalid_requests_never_launch(self):
         actor = Mock()
@@ -382,7 +464,8 @@ class ServiceContracts(AccountFixture):
         self.assertEqual(result["result"]["scheduled_count"], 1)
         actor.assert_called_once()
         empty = str(uuid.uuid4())
-        self.submit(empty, launcher=lambda *_a, **_k: None)
+        with patch.object(service_jobs, "process_identity", return_value=None):
+            self.submit(empty, launcher=lambda *_a, **_k: None)
         with (
             patch.object(config, "DATA", self.root / "data"),
             patch.object(batch, "run_batch", return_value=[]),

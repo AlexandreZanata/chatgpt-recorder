@@ -77,6 +77,9 @@ def main() -> int:
                 raise ValueError("adapter response exceeds its output limit")
             print(output)
         return 0
+    except service_jobs.CapacityReached:
+        print(json.dumps({"schema_version": 1, "error": "capacity_reached"}))
+        return 1
     except Exception:
         # Never serialize arbitrary provider/browser exceptions, credentials or local paths.
         print(json.dumps({"schema_version": 1, "error": "operation_rejected"}))

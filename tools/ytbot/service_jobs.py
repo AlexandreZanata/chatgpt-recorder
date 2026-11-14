@@ -89,6 +89,81 @@ def job_lock(operation_id: str):
         os.close(descriptor)
 
 
+class CapacityReached(RuntimeError):
+    """Another admitted media actor may still consume the host's resource budget."""
+
+
+@contextlib.contextmanager
+def admission_lock():
+    descriptor = os.open(
+        jobs_root() / "admission.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600
+    )
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(descriptor)
+
+
+def unit_active(operation_id: str) -> bool | None:
+    """False requires positive inactive/not-found evidence; missing bus is unknown."""
+    operation_id = canonical_id(operation_id)
+    try:
+        result = subprocess.run(
+            [
+                "/usr/bin/systemctl", "--user", "show",
+                "youtubebot-" + operation_id + ".service",
+                "--property=ActiveState", "--property=LoadState",
+            ],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            timeout=5, check=False, text=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    fields = dict(
+        line.split("=", 1) for line in result.stdout.splitlines() if "=" in line
+    )
+    if fields.get("ActiveState") in {"active", "activating", "deactivating", "reloading"}:
+        return True
+    if fields.get("LoadState") == "not-found" or fields.get("ActiveState") in {"inactive", "failed"}:
+        return False
+    return None
+
+
+def capacity_occupied(operation_id: str, probe) -> bool:
+    record = read_private(jobs_root() / (canonical_id(operation_id) + ".json"))
+    if not record:
+        # A crash between reserving capacity and writing admission requires inspection.
+        return True
+    identity = record.get("process_identity")
+    if identity and process_identity(record.get("pid", 0)) == identity:
+        return True
+    if record["state"] == "accepted" and time.time() - record["created_at"] <= 30:
+        return True
+    if record.get("error_code") == "setup_unavailable" and not record.get("pid"):
+        return False  # The launcher proved that no unit or actor was created.
+    return probe(operation_id) is not False
+
+
+def reserve_capacity(operation_id: str, probe) -> None:
+    path = jobs_root() / "active-job.json"
+    previous = read_private(path)
+    if previous:
+        candidates = [canonical_id(previous["operation_id"])]
+    else:
+        # Conservative first admission after upgrading from pre-global-gate versions.
+        candidates = []
+        for candidate in jobs_root().glob("*.json"):
+            try:
+                candidates.append(canonical_id(candidate.stem))
+            except ValueError:
+                continue
+    if any(capacity_occupied(candidate, probe) for candidate in candidates):
+        raise CapacityReached("one media job is already admitted; poll its status")
+    # This reservation precedes both the durable job and actor launch.
+    write_private(path, {"schema": 1, "operation_id": operation_id})
+
+
 def status(operation_id: str) -> dict:
     with job_lock(operation_id):
         return _status(operation_id)
@@ -212,6 +287,7 @@ def submit(
     *,
     launcher=launch_actor,
     store: AccountStore | None = None,
+    unit_probe=unit_active,
 ) -> dict:
     operation_id = canonical_id(operation_id)
     channels.get(channel)
@@ -244,12 +320,13 @@ def submit(
         "error_code": None,
         "summary": "Video batch durably accepted; not yet finished.",
     }
-    with job_lock(operation_id):
+    with admission_lock(), job_lock(operation_id):
         previous = read_private(path)
         if previous:
             if previous.get("fingerprint") != fingerprint:
                 raise ValueError("operation ID belongs to a different request")
             return _status(operation_id)
+        reserve_capacity(operation_id, unit_probe)
         write_private(path, record, exclusive=True)
     # An admission record always exists before a process or external browser action.
     environment = {
@@ -318,9 +395,18 @@ def execute(operation_id: str) -> None:
     directory = jobs_root()
     path = directory / (operation_id + ".json")
     # This marker intentionally survives a crash; invoking the same job cannot repeat an uncertain upload.
-    with job_lock(operation_id):
+    with admission_lock(), job_lock(operation_id):
         record = read_private(path)
         if not record or record["state"] != "accepted":
+            return
+        reservation = read_private(directory / "active-job.json")
+        if not reservation or reservation.get("operation_id") != operation_id:
+            record.update(
+                state="failed", error_code="execution_failed",
+                updated_at=int(time.time()),
+                summary="Media admission was superseded before execution; no pipeline was started.",
+            )
+            write_private(path, record)
             return
         try:
             fence = os.open(
