@@ -1,5 +1,7 @@
 # MASTER VISUAL IDENTITY — SACRED BROWN ENGRAVING
 
+GENERATE THE FINAL THUMBNAIL IMAGE NOW using image generation. Do NOT ask for or require a reference image. Do NOT reply with text or questions. Use only the article excerpt included below and the visual identity in this prompt.
+
 
 Create a YouTube thumbnail based on the specific theme provided at the end of this prompt.
 
@@ -916,4 +918,4 @@ The final image should look like:
 THEME:
 
 
-Use the central true biblical story, character, and emotional moment of the attached article. Choose ONE scene only. Do not invent a different story. Base the scene on the attached article.
+Use the central true biblical story, character, and emotional moment of the attached article. Choose ONE scene only. Do not invent a different story. Base the scene on the article excerpt included below. No reference image is needed. Generate ONE final image now.

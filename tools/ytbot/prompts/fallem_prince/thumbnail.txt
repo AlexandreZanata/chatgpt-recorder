@@ -1,8 +1,10 @@
-USANDO O ARTIGO QUE EU ANEXEI GERE ESSA THUMBANAIL
+GERE A THUMBNAIL FINAL AGORA usando geração de imagem. Não peça imagem de referência, não faça perguntas e não responda com texto. Use apenas o trecho do artigo incluído abaixo e a identidade visual a seguir.
+
+GENERATE THE FINAL THUMBNAIL IMAGE NOW using image generation. Do NOT ask for or require a reference image. Do NOT reply with text or questions. Use only the article excerpt included below and the visual identity below.
 
 # MASTER VISUAL IDENTITY — THE BLACK INK VOID
 
-Create a YouTube thumbnail based on the article below.
+Create a YouTube thumbnail based on the article excerpt included below.
 
 The thumbnail must follow a permanent visual identity called:
 
@@ -403,4 +405,4 @@ Generate ONE definitive thumbnail.
 
 # ARTICLE
 
-*THE ARTICLE IS ATTECH ABOVE
+The article excerpt is included below. No reference image is needed. Generate ONE final image now.

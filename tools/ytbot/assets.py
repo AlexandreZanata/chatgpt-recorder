@@ -11,9 +11,8 @@ from . import config, logic
 from .chat import copy_last, dismiss_notice, log, send_text, wait_for_assistant
 
 
-def attach_article(page, article: Path) -> None:
-    page.locator('input[aria-label="Attach files"]').set_input_files(str(article))
-    page.wait_for_timeout(3000)
+def article_excerpt(run_dir: Path, limit: int = 8000) -> str:
+    return (run_dir / "article.txt").read_text(encoding="utf-8")[:limit]
 
 
 def generate_metadata(context, run_dir: Path, topic: str) -> dict:
@@ -22,8 +21,9 @@ def generate_metadata(context, run_dir: Path, topic: str) -> dict:
         page.goto("https://chatgpt.com/", timeout=90000)
         page.wait_for_timeout(7000)
         dismiss_notice(page)
-        attach_article(page, run_dir / "article.txt")
-        send_text(page, config.prompt("metadata.txt") + "\n\nStory topic: " + topic)
+        request = (config.prompt("metadata.txt") + "\n\nStory topic: " + topic
+                   + "\n\nARTICLE (excerpt, included below):\n" + article_excerpt(run_dir))
+        send_text(page, request)
         log(f"metadata prompt sent: {topic}")
         wait_for_assistant(page)
         raw = copy_last(page).strip()
@@ -62,8 +62,9 @@ def generate_thumbnail(context, run_dir: Path, timeout: int = 1200) -> Path | No
         page.goto("https://chatgpt.com/", timeout=90000)
         page.wait_for_timeout(7000)
         dismiss_notice(page)
-        attach_article(page, run_dir / "article.txt")
-        send_text(page, config.prompt("thumbnail.txt"))
+        request = (config.prompt("thumbnail.txt")
+                   + "\n\nARTICLE (excerpt, included below):\n" + article_excerpt(run_dir))
+        send_text(page, request)
         log("thumbnail prompt sent")
         deadline = time.time() + timeout
         while time.time() < deadline:
