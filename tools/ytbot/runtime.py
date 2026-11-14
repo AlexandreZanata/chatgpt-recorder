@@ -3,13 +3,15 @@
 from __future__ import annotations
 import json
 import os
+import shlex
 import shutil
+import socket
 import sqlite3
 import subprocess
 import time
 import urllib.request
 from pathlib import Path
-from . import config
+from . import browser_install, config
 
 
 def log(message: str) -> None:
@@ -21,9 +23,19 @@ def _browser_processes():
         if not entry.name.isdigit():
             continue
         try:
-            arguments = (entry / "cmdline").read_bytes().split(b"\0")
+            arguments = [
+                argument
+                for argument in (entry / "cmdline").read_bytes().split(b"\0")
+                if argument
+            ]
+            # Some Chrome builds rewrite argv as one shell-quoted command line.
+            if len(arguments) == 1:
+                arguments = [
+                    os.fsencode(arg)
+                    for arg in shlex.split(os.fsdecode(arguments[0]))
+                ]
             executable = (entry / "exe").resolve()
-        except OSError:
+        except (OSError, ValueError):
             continue
         if executable.name in ("chrome", "chromium") and not any(
             arg.startswith(b"--type=") for arg in arguments
@@ -62,6 +74,8 @@ def stop_hidden_chrome() -> None:
         if not _chrome_pids():
             break
         time.sleep(0.5)
+    if _chrome_pids():
+        raise RuntimeError("the dedicated browser is still running; profile locks were preserved")
     for name in ("SingletonLock", "SingletonSocket", "SingletonCookie"):
         (config.PROFILE / name).unlink(missing_ok=True)
     for _ in range(20):
@@ -81,26 +95,36 @@ def chrome_running() -> bool:
         return False
 
 
+def _display_running(path: Path) -> bool:
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(1)
+        try:
+            connection.connect(str(path))
+            return True
+        except (FileNotFoundError, ConnectionRefusedError):
+            return False
+
+
 def ensure_xvfb() -> None:
-    socket = Path(f"/tmp/.X11-unix/X{config.DISPLAY.lstrip(':')}")
-    if socket.exists():
+    display_socket = Path(f"/tmp/.X11-unix/X{config.DISPLAY.lstrip(':')}")
+    if _display_running(display_socket):
         return
     subprocess.Popen(
-        ["Xvfb", config.DISPLAY, "-screen", "0", "1920x1080x24"],
+        ["Xvfb", config.DISPLAY, "-screen", "0", "1920x1080x24", "-nolisten", "tcp"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
     for _ in range(20):
         time.sleep(0.5)
-        if socket.exists():
+        if _display_running(display_socket):
             return
     raise RuntimeError("Xvfb did not start")
 
 
 def _chrome_env() -> dict:
     return dict(
-        os.environ,
+        browser_install.environment(),
         DISPLAY=config.DISPLAY,
         WAYLAND_DISPLAY="",
         XDG_RUNTIME_DIR=os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"),
@@ -113,7 +137,8 @@ def start_hidden_chrome() -> None:
         return
     subprocess.Popen(
         [
-            "/usr/bin/google-chrome",
+            browser_install.executable(),
+            *browser_install.arguments(),
             "--ozone-platform=x11",
             f"--user-data-dir={config.PROFILE}",
             "--profile-directory=Default",
@@ -133,51 +158,6 @@ def start_hidden_chrome() -> None:
         if chrome_running():
             return
     raise RuntimeError("hidden Chrome did not start")
-
-
-def _chrome_time() -> str:
-    return str(int((time.time() + 11644473600) * 1_000_000))
-
-
-def _extension_entry() -> dict:
-    permissions = ["activeTab", "downloads", "storage", "tabCapture", "offscreen"]
-    host = "https://chatgpt.com/*"
-    return {
-        "account_extension_type": 0,
-        "active_permissions": {
-            "api": permissions,
-            "explicit_host": [host],
-            "manifest_permissions": [],
-            "scriptable_host": [host],
-        },
-        "commands": {"_execute_action": {"suggested_key": "Ctrl+Shift+U"}},
-        "content_settings": [],
-        "creation_flags": 0,
-        "disable_reasons": [],
-        "first_install_time": _chrome_time(),
-        "from_webstore": False,
-        "granted_permissions": {
-            "api": permissions,
-            "explicit_host": [host],
-            "manifest_permissions": [],
-            "scriptable_host": [host],
-        },
-        "has_started_service_worker": True,
-        "incognito_content_settings": [],
-        "incognito_preferences": {},
-        "last_update_time": _chrome_time(),
-        "location": 4,
-        "newAllowFileAccess": True,
-        "path": str(config.EXT_PATH),
-        "preferences": {},
-        "regular_only_preferences": {},
-        "service_worker_registration_info": {"version": "0.1.0"},
-        "serviceworkerevents": ["downloads.onChanged"],
-        "was_installed_by_default": False,
-        "was_installed_by_oem": False,
-        "was_pinned_by_default": True,
-        "withholding_permissions": False,
-    }
 
 
 def _copy_cookies() -> None:
@@ -204,10 +184,11 @@ def _write_preferences() -> None:
     else:
         data = {}
     data.setdefault("extensions", {}).setdefault("ui", {})["developer_mode"] = True
-    data["extensions"].setdefault("settings", {})[config.EXT_ID] = _extension_entry()
+    # Extension registration belongs to Chrome. Replacing it loses persisted state.
     data.setdefault("download", {})["default_directory"] = str(config.DOWNLOADS)
     data["download"]["prompt_for_download"] = False
     prefs_path.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+    prefs_path.chmod(0o600)
 
 
 def setup_profile() -> None:
@@ -278,9 +259,11 @@ def launch_upload_context(playwright):
         try:
             return playwright.chromium.launch_persistent_context(
                 str(config.PROFILE),
-                executable_path="/usr/bin/google-chrome",
+                executable_path=browser_install.executable(),
+                chromium_sandbox=True,
                 headless=False,
                 args=[
+                    *browser_install.arguments(),
                     "--ozone-platform=x11",
                     "--profile-directory=Default",
                     "--no-first-run",
@@ -288,7 +271,7 @@ def launch_upload_context(playwright):
                     "--window-position=0,0",
                     "--window-size=1600,1000",
                 ],
-                ignore_default_args=["--password-store=basic", "--use-mock-keychain"],
+                ignore_default_args=["--password-store=basic", "--use-mock-keychain", "--disable-extensions"],
                 env=_chrome_env(),
                 accept_downloads=True,
             )

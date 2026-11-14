@@ -41,6 +41,8 @@ class AccountWindowTests(TestCase):
         ):
             window = AccountsWindow()
             self.addCleanup(window.deleteLater)
+            self.assertIsNone(window.channel.currentData())
+            window.channel.setCurrentIndex(window.channel.findData("fallem-prince"))
             self.assertEqual(window.table.rowCount(), 2)
             self.assertEqual(
                 window.table.editTriggers(), QAbstractItemView.NoEditTriggers

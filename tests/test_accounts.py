@@ -28,12 +28,13 @@ class AccountFixture(unittest.TestCase):
         self.patch = patch.object(config, "ROOT", self.root)
         self.patch.start()
         self.addCleanup(self.patch.stop)
-        previous = (config.PROFILE, config.CDP_PORT, config.ACCOUNT_ID)
+        previous = (config.PROFILE, config.CDP_PORT, config.ACCOUNT_ID, config.BROWSER_MODE)
         self.addCleanup(
             lambda: (
                 setattr(config, "PROFILE", previous[0]),
                 setattr(config, "CDP_PORT", previous[1]),
                 setattr(config, "ACCOUNT_ID", previous[2]),
+                setattr(config, "BROWSER_MODE", previous[3]),
             )
         )
         self.store = AccountStore()

@@ -27,9 +27,20 @@ OS keyring and may require fresh interactive Google/ChatGPT login on the destina
 New public code derives project paths from its own module location, normal Chrome paths
 from `Path.home()` and runtime paths from the actual user ID/environment. Use the new
 `python -m tools.ytbot` CLI rather than executing historical copied `.local/bot` helper
-scripts with old absolute paths. `accounts connect` rebinds only the bot Chrome Preferences
-extension path and download directory for the new checkout while preserving settings.
+scripts with old absolute paths. `accounts connect` updates only the bot download
+preferences; extension registration belongs to Chrome and is not overwritten.
 Never globally replace path strings inside cookies/token databases or historical evidence.
+
+This unkeyed Chrome build gets its ID from its absolute installation directory.
+[The assisted installer](INSTALL-LINUX.md) loads `dist/chrome` automatically in a managed
+browser. Existing system-browser profiles are preserved separately when opting into that
+browser; its first use requires fresh sign-in. For manual system-browser setup, load the
+current `dist/chrome` folder in each dedicated account profile after moving to a new PC.
+The bot derives that local ID rather than reusing the source PC's extension ID.
+
+An existing X11 socket alone does not prove that the hidden display is running; the
+runtime checks the local connection. Browser shutdown preserves profile lock files if
+the dedicated session cannot be stopped, including when Chrome rewrites its arguments.
 
 After restoration, use the current work-PC ZaturoBot enrollment; do not replace its keys,
 identity or execution journal. Confirm the source revision, private directory/file modes,

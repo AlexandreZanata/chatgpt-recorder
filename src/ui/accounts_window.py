@@ -1,6 +1,7 @@
 """Additive account/channel/library window; existing generation controls stay intact."""
 
 from __future__ import annotations
+import json
 import sys
 from pathlib import Path
 from PySide6.QtCore import QProcess, QThread, Signal
@@ -21,7 +22,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QVBoxLayout,
 )
-from tools.ytbot import channels, config, library
+from tools.ytbot import browser_install, channels, config, library
 from tools.ytbot.accounts_store import AccountStore
 
 
@@ -54,6 +55,7 @@ class AccountsWindow(QDialog):
         self.store = AccountStore()
         self.browser = None
         self.verification = None
+        self.readiness = None
         self.oauth_job = None
         self.oauth_channels = []
         layout = QVBoxLayout(self)
@@ -71,6 +73,10 @@ class AccountsWindow(QDialog):
         self.channel = QComboBox()
         for channel in channels.CHANNELS.values():
             self.channel.addItem(channel.name, channel.slug)
+        self.channel.setPlaceholderText("Escolha o perfil do canal")
+        bindings = self.store.load()["bindings"]
+        preferred = next(iter(bindings)) if len(bindings) == 1 else None
+        self.channel.setCurrentIndex(self.channel.findData(preferred))
         self.channel.currentIndexChanged.connect(self.refresh_library)
         form.addRow("Perfil do canal", self.channel)
         layout.addLayout(form)
@@ -86,9 +92,13 @@ class AccountsWindow(QDialog):
         add.addWidget(button)
         layout.addLayout(add)
         actions = QHBoxLayout()
-        self.signin = QPushButton("Abrir janela para conectar Google / Studio")
+        self.signin = QPushButton("Conectar Google / YouTube e ChatGPT")
         self.signin.clicked.connect(self.connect_browser)
         actions.addWidget(self.signin)
+        self.finish_signin = QPushButton("Concluir login")
+        self.finish_signin.setEnabled(False)
+        self.finish_signin.clicked.connect(self.finish_browser_login)
+        actions.addWidget(self.finish_signin)
         self.oauth = QPushButton("Conectar API Google (opcional)")
         self.oauth.clicked.connect(self.connect_oauth)
         actions.addWidget(self.oauth)
@@ -96,6 +106,14 @@ class AccountsWindow(QDialog):
         refresh.clicked.connect(self.refresh)
         actions.addWidget(refresh)
         layout.addLayout(actions)
+        guide = QHBoxLayout()
+        self.check = QPushButton("Verificar conexão completa")
+        self.check.clicked.connect(self.check_connection)
+        guide.addWidget(self.check)
+        help_button = QPushButton("Ajuda para instalar e conectar")
+        help_button.clicked.connect(self.show_setup_help)
+        guide.addWidget(help_button)
+        layout.addLayout(guide)
         self.verified = QComboBox()
         form2 = QFormLayout()
         form2.addRow("Canal verificado pela API", self.verified)
@@ -139,12 +157,16 @@ class AccountsWindow(QDialog):
         return self.account.currentData() or "legacy"
 
     def refresh(self):
-        previous = self.selected_account()
+        previous = self.account.currentData()
+        if previous is None:
+            previous = self.store.load()["bindings"].get(self.channel.currentData(), {}).get("account_id")
+            if previous is None:
+                previous = next(iter(self.store.load()["accounts"]), "legacy")
         self.account.blockSignals(True)
         self.account.clear()
         for item in self.store.public_accounts():
             suffix = (
-                " · navegador configurado"
+                " · perfil existente"
                 if item["browser_configured"]
                 else " · precisa conectar"
             )
@@ -171,30 +193,86 @@ class AccountsWindow(QDialog):
         self.browser.setWorkingDirectory(str(config.ROOT))
         self.browser.setProcessChannelMode(QProcess.SeparateChannels)
         self.browser.finished.connect(self.browser_finished)
-        self.browser.start(
-            sys.executable,
-            [
+        arguments = [
                 "-m",
                 "tools.ytbot",
                 "accounts",
                 "connect",
                 "--account",
                 self.selected_account(),
-            ],
-        )
+            ]
+        if self.selected_account() != "legacy" and browser_install.managed_executable():
+            arguments.append("--managed")
+        self.browser.start(sys.executable, arguments)
         self.signin.setEnabled(False)
+        self.finish_signin.setEnabled(True)
         self.status.setText(
-            "Conecte as contas Google/ChatGPT e feche a janela do navegador quando terminar. O perfil normal não será alterado."
+            "Conecte Google/YouTube e ChatGPT e feche o navegador. A primeira ativação do navegador automático pede novos logins; o perfil anterior fica preservado."
         )
 
     def browser_finished(self, exit_code, _status):
         self.signin.setEnabled(True)
+        self.finish_signin.setEnabled(False)
         self.refresh()
         self.status.setText(
-            "Janela encerrada. A identidade do canal será conferida antes do upload."
+            "Login encerrado. Escolha o perfil do canal, vincule a conta e clique em Verificar conexão completa."
             if exit_code == 0
             else "Não foi possível abrir a sessão. Verifique o Chrome, o ambiente gráfico e se há lote ativo nessa conta."
         )
+
+    def finish_browser_login(self):
+        if self.browser and self.browser.state() != QProcess.NotRunning:
+            self.browser.terminate()
+            self.finish_signin.setEnabled(False)
+            self.status.setText("Salvando a sessão e encerrando o navegador desta conta...")
+
+    def show_setup_help(self):
+        QMessageBox.information(
+            self, "Instalação e conexão",
+            "Em outro computador Ubuntu/Debian, baixe o projeto e execute, dentro da pasta dele:\n"
+            "bash scripts/install-linux.sh\n\n"
+            "1. Escolha ou adicione sua conta nesta janela.\n"
+            "2. Clique em Conectar Google / YouTube e ChatGPT. As duas abas serão abertas.\n"
+            "3. Entre pessoalmente nas contas e escolha o canal correto no YouTube.\n"
+            "4. Clique em Concluir login ou feche a janela do navegador para salvar a sessão.\n"
+            "5. Escolha o perfil do canal e clique em Usar esta conta no perfil escolhido.\n"
+            "6. Clique em Verificar conexão completa.\n\n"
+            "O instalador prepara a extensão automaticamente: não é necessário selecionar pastas. "
+            "Se houver duas cópias da extensão, use a que fica em dist/chrome.\n\n"
+            "Os logins ficam no perfil privado deste PC. Em outro PC ou após expirar a sessão, "
+            "o Google e o ChatGPT podem pedir um novo login. Reinstalar não apaga as contas. "
+            "Guia completo: docs/INSTALL-LINUX.md.",
+        )
+
+    def check_connection(self):
+        if not self.channel.currentData():
+            self.status.setText("Escolha o perfil do canal antes de verificar a conexão.")
+            return
+        if self.browser and self.browser.state() != QProcess.NotRunning:
+            self.status.setText("Feche a janela de login antes de verificar a conexão.")
+            return
+        if self.readiness and self.readiness.state() != QProcess.NotRunning:
+            return
+        self.readiness = QProcess(self)
+        self.readiness.setWorkingDirectory(str(config.ROOT))
+        self.readiness.finished.connect(self.readiness_finished)
+        self.readiness.start(sys.executable, [
+            "-m", "tools.ytbot", "accounts", "check", "--account", self.selected_account(),
+            "--channel", self.channel.currentData(),
+        ])
+        self.check.setEnabled(False)
+        self.status.setText("Conferindo canal, extensão e sessão ChatGPT. Aguarde; nenhum vídeo será enviado.")
+
+    def readiness_finished(self, code, _status):
+        self.check.setEnabled(True)
+        try:
+            result = json.loads(bytes(self.readiness.readAllStandardOutput()).decode())
+        except (ValueError, UnicodeError):
+            self.status.setText("Não foi possível verificar. Feche o login e aguarde qualquer lote ativo antes de tentar novamente.")
+            return
+        labels = [("Canal correto", "channel_verified"), ("Extensão", "extension_ready"), ("ChatGPT conectado", "chatgpt_authenticated")]
+        self.status.setText(" · ".join(f"{label}: {'OK' if result.get(key) else 'precisa verificar'}" for label, key in labels)
+                            + (". Conexões prontas." if code == 0 and result.get("ready") else ". Use Conectar ou consulte a ajuda."))
 
     def connect_oauth(self):
         if self.oauth_job and self.oauth_job.isRunning():
@@ -237,6 +315,9 @@ class AccountsWindow(QDialog):
             )
 
     def bind(self):
+        if not self.channel.currentData():
+            self.status.setText("Escolha o perfil do canal antes de vincular a conta.")
+            return
         channel_id = self.verified.currentData()
         if not channel_id:
             if self.browser and self.browser.state() != QProcess.NotRunning:
@@ -286,6 +367,9 @@ class AccountsWindow(QDialog):
     def refresh_library(self):
         slug = self.channel.currentData()
         if not slug:
+            self.binding.setText("Escolha o perfil do canal para conferir a conta vinculada.")
+            self.records = []
+            self.render_library()
             return
         binding = self.store.load()["bindings"].get(slug, {"account_id": "legacy"})
         expected = channels.get(slug).channel_id
@@ -316,6 +400,7 @@ class AccountsWindow(QDialog):
             (self.oauth_job and self.oauth_job.isRunning())
             or (self.browser and self.browser.state() != QProcess.NotRunning)
             or (self.verification and self.verification.state() != QProcess.NotRunning)
+            or (self.readiness and self.readiness.state() != QProcess.NotRunning)
         ):
             self.status.setText(
                 "Conclua ou aguarde o encerramento da conexão Google antes de fechar."

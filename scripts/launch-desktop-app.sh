@@ -8,7 +8,6 @@ export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
 
 PYTHON_BIN=""
 CANDIDATES=(
-  "${HOME}/PESSOAL-PROJETOS-ALEXANDRE/Fooocus/venv/bin/python"
   "${ROOT}/.venv/bin/python"
   "${ROOT}/venv/bin/python"
   "${HOME}/.pyenv/shims/python3"
