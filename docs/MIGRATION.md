@@ -35,6 +35,10 @@ This unkeyed Chrome build gets its ID from its absolute installation directory.
 Load the current `dist/chrome` folder in each dedicated account profile after moving to
 a new PC. The bot derives that local ID rather than reusing the source PC's extension ID.
 
+An existing X11 socket alone does not prove that the hidden display is running; the
+runtime checks the local connection. Browser shutdown preserves profile lock files if
+the dedicated session cannot be stopped, including when Chrome rewrites its arguments.
+
 After restoration, use the current work-PC ZaturoBot enrollment; do not replace its keys,
 identity or execution journal. Confirm the source revision, private directory/file modes,
 manifest hashes, profile/run listing and account-manager window before any live generation.

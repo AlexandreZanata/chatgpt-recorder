@@ -3,7 +3,9 @@
 from __future__ import annotations
 import json
 import os
+import shlex
 import shutil
+import socket
 import sqlite3
 import subprocess
 import time
@@ -21,9 +23,19 @@ def _browser_processes():
         if not entry.name.isdigit():
             continue
         try:
-            arguments = (entry / "cmdline").read_bytes().split(b"\0")
+            arguments = [
+                argument
+                for argument in (entry / "cmdline").read_bytes().split(b"\0")
+                if argument
+            ]
+            # Some Chrome builds rewrite argv as one shell-quoted command line.
+            if len(arguments) == 1:
+                arguments = [
+                    os.fsencode(arg)
+                    for arg in shlex.split(os.fsdecode(arguments[0]))
+                ]
             executable = (entry / "exe").resolve()
-        except OSError:
+        except (OSError, ValueError):
             continue
         if executable.name in ("chrome", "chromium") and not any(
             arg.startswith(b"--type=") for arg in arguments
@@ -62,6 +74,8 @@ def stop_hidden_chrome() -> None:
         if not _chrome_pids():
             break
         time.sleep(0.5)
+    if _chrome_pids():
+        raise RuntimeError("the dedicated browser is still running; profile locks were preserved")
     for name in ("SingletonLock", "SingletonSocket", "SingletonCookie"):
         (config.PROFILE / name).unlink(missing_ok=True)
     for _ in range(20):
@@ -81,19 +95,29 @@ def chrome_running() -> bool:
         return False
 
 
+def _display_running(path: Path) -> bool:
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(1)
+        try:
+            connection.connect(str(path))
+            return True
+        except (FileNotFoundError, ConnectionRefusedError):
+            return False
+
+
 def ensure_xvfb() -> None:
-    socket = Path(f"/tmp/.X11-unix/X{config.DISPLAY.lstrip(':')}")
-    if socket.exists():
+    display_socket = Path(f"/tmp/.X11-unix/X{config.DISPLAY.lstrip(':')}")
+    if _display_running(display_socket):
         return
     subprocess.Popen(
-        ["Xvfb", config.DISPLAY, "-screen", "0", "1920x1080x24"],
+        ["Xvfb", config.DISPLAY, "-screen", "0", "1920x1080x24", "-nolisten", "tcp"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
     for _ in range(20):
         time.sleep(0.5)
-        if socket.exists():
+        if _display_running(display_socket):
             return
     raise RuntimeError("Xvfb did not start")
 
