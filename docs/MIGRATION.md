@@ -31,6 +31,10 @@ scripts with old absolute paths. `accounts connect` rebinds only the bot Chrome 
 extension path and download directory for the new checkout while preserving settings.
 Never globally replace path strings inside cookies/token databases or historical evidence.
 
+This unkeyed Chrome build gets its ID from its absolute installation directory.
+Load the current `dist/chrome` folder in each dedicated account profile after moving to
+a new PC. The bot derives that local ID rather than reusing the source PC's extension ID.
+
 After restoration, use the current work-PC ZaturoBot enrollment; do not replace its keys,
 identity or execution journal. Confirm the source revision, private directory/file modes,
 manifest hashes, profile/run listing and account-manager window before any live generation.

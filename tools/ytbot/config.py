@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,8 +28,11 @@ STUDIO_EDIT = "https://studio.youtube.com/video/{video_id}/edit"
 STUDIO_LOGIN = "https://studio.youtube.com/"
 MAIN_CHROME = Path.home() / ".config" / "google-chrome" / "Default"
 MAIN_LOCAL_STATE = Path.home() / ".config" / "google-chrome" / "Local State"
-EXT_ID = "hppbbbakngelcnbjhfioognjklbdnphe"
 EXT_PATH = ROOT / "dist" / "chrome"
+EXT_ID = "".join(
+    chr(ord("a") + int(digit, 16))
+    for digit in hashlib.sha256(str(EXT_PATH).encode("utf-8")).hexdigest()[:32]
+)
 DISPLAY = ":99"
 CDP_PORT = 9300
 ACCOUNT_ID = "legacy"
