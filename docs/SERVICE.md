@@ -78,3 +78,24 @@ for liveness. Lost/unstarted actors become `uncertain`, retain admission evidenc
 are never automatically re-executed. Reconcile existing run/upload records before a new
 explicit operation. Do not delete a job/marker to force a retry of an unknown upload.
 `_execute` is an internal fixed actor entry point, not a supported owner command.
+
+
+## Generation-only integration
+
+The additive `generate --operation-id UUID --channel SLUG --count 1..10
+--approved-generation` command resolves the channel's configured account binding and
+admits a separate durable actor. Its request explicitly disables scheduled publication;
+the original `submit --approved-schedule` path and fingerprint remain unchanged.
+`mode=generate` and `generated_count` are additive status fields. Reconcile status for
+the same operation after an uncertain response; never repeat an unknown generation.
+
+Before generation, the actor checks the existing dedicated browser profile with read-only
+Google Studio and ChatGPT pages. Positive UI evidence is required. Login-required, unknown,
+unavailable and missing-profile states produce fixed bounded error codes/readiness fields;
+raw browser exceptions, cookies or tokens are not public output. Unknown DOM or network
+failure must not be called a logout. Real sign-in remains an owner action on that PC.
+
+Generation reuses topic selection and the existing sequential assets/narration/render
+pipeline. It never invokes upload/scheduling. Completion requires the requested number of
+ready `video.mp4` artifacts; partial results remain in the existing resumable local records.
+Read-only checks and synthetic tests do not prove an actual account is currently signed in.

@@ -65,10 +65,12 @@ def public(record: dict) -> dict:
         "channel": request["channel"],
         "account": request["account"],
         "count": request["count"],
+        "mode": request.get("mode", "schedule"),
         "created_at": record["created_at"],
         "updated_at": record["updated_at"],
         "summary": str(record.get("summary", ""))[:1000],
         "error_code": record.get("error_code"),
+        "readiness": {key: (value if value in {"ready", "login_required", "unknown", "unavailable"} else "unknown") for key, value in record.get("readiness", {}).items() if key in {"google", "chatgpt"}} if isinstance(record.get("readiness"), dict) else None,
         "result": record.get(
             "result", {"scheduled_count": 0, "failed_count": 0, "runs": []}
         ),
@@ -285,6 +287,8 @@ def submit(
     count: int,
     approved_schedule: bool,
     *,
+    mode="schedule",
+    approved_generate=False,
     launcher=launch_actor,
     store: AccountStore | None = None,
     unit_probe=unit_active,
@@ -293,7 +297,7 @@ def submit(
     channels.get(channel)
     store = store or AccountStore()
     store.account(account)
-    if not 1 <= count <= 10 or not approved_schedule:
+    if not 1 <= count <= 10 or mode not in {"generate", "schedule"} or not (approved_generate if mode == "generate" else approved_schedule):
         raise ValueError(
             "count must be 1..10 and explicit scheduled-publication permission is required"
         )
@@ -303,6 +307,8 @@ def submit(
         "count": count,
         "approved_schedule": True,
     }
+    if mode == "generate":
+        request.update(mode="generate", approved_schedule=False, approved_generate=True)
     fingerprint = hashlib.sha256(
         json.dumps(request, sort_keys=True).encode()
     ).hexdigest()
@@ -390,6 +396,12 @@ class BoundedLog:
         self.stream.flush()
 
 
+class ReadinessBlocked(RuntimeError):
+    def __init__(self, evidence):
+        super().__init__("readiness check blocked generation")
+        self.evidence = evidence
+
+
 def execute(operation_id: str) -> None:
     operation_id = canonical_id(operation_id)
     directory = jobs_root()
@@ -448,7 +460,23 @@ def execute(operation_id: str) -> None:
                             p.parent.name: p.stat().st_mtime_ns
                             for p in config.RUNS.glob("*/record.json")
                         }
-                        failures = run_batch(request["count"])
+                        if request.get("mode") == "generate":
+                            from playwright.sync_api import sync_playwright
+                            from . import runtime, preflight
+                            from .generation import run_generation
+                            if not (config.PROFILE / "Default").is_dir():
+                                raise ReadinessBlocked({"ready": False, "code": "profile_missing", "checks": {"google": "unknown", "chatgpt": "unknown"}, "summary": "O perfil dedicado do YoutubeBot não está configurado. Entre no PC de trabalho e conecte Google e ChatGPT. Nenhum vídeo foi criado."})
+                            runtime.start_hidden_chrome()
+                            with sync_playwright() as playwright:
+                                browser, context = runtime.connect_hidden(playwright)
+                                readiness = preflight.check(context)
+                                if not readiness["ready"]:
+                                    raise ReadinessBlocked(readiness)
+                                runtime.configure_downloads(browser)
+                                runtime.configure_extension(context)
+                                failures = run_generation(request["count"], context)
+                        else:
+                            failures = run_batch(request["count"])
                         changed = {
                             p.parent.name
                             for p in config.RUNS.glob("*/record.json")
@@ -460,17 +488,22 @@ def execute(operation_id: str) -> None:
                             if item["id"] in changed
                         ][: request["count"]]
                 scheduled = sum(item["state"] == "scheduled" for item in results)
-                failed = max(len(failures), request["count"] - scheduled)
+                generated = sum(item["state"] == "ready" and "video.mp4" in item["artifacts"] for item in results)
+                successful = generated if request.get("mode") == "generate" else scheduled
+                failed = max(len(failures), request["count"] - successful)
                 record.update(
                     state="failed" if failed else "completed",
                     error_code="batch_failed" if failed else None,
-                    summary=f"Batch finished: {scheduled} scheduled video(s), {failed} incomplete or failed item(s).",
+                    summary=(f"Generation finished: {generated} video(s) ready, no publication; {failed} incomplete item(s)." if request.get("mode") == "generate" else f"Batch finished: {scheduled} scheduled video(s), {failed} incomplete or failed item(s)."),
                     result={
                         "scheduled_count": scheduled,
+                        "generated_count": generated,
                         "failed_count": failed,
                         "runs": results,
                     },
                 )
+            except ReadinessBlocked as blocked:
+                record.update(state="failed", error_code=blocked.evidence["code"], summary=blocked.evidence["summary"], readiness=blocked.evidence["checks"])
             except BaseException:
                 record.update(
                     state="failed",

@@ -38,3 +38,11 @@ gate before publication. Report actual checks and remaining physical-account/GPU
 No harness, dynamic rule resolver or hook framework is required. Keep docs concise and
 canonical: README for commands, architecture for ownership, topic docs for contracts.
 Never delete the owner's original local media, browser state, credentials or unrelated repos.
+
+
+The owner's bounded native-chat extension also authorizes generation-only service jobs.
+Preserve scheduled-submit defaults; `generate` must never upload. `preflight.py` reports
+actual positive/login-required/unknown browser evidence without raw credential output.
+`generation.py` reuses the existing assets/render core sequentially. Uncertain operations
+remain fenced; only verified ready video artifacts count as completion. No live account,
+media generation or paid action belongs in CI fixtures.

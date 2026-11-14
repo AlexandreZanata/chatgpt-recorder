@@ -31,3 +31,9 @@ polls accepted jobs; it must not report an accepted video batch as finished.
 Canonical docs: [accounts](ACCOUNTS.md), [service](SERVICE.md),
 [media pipeline](../tools/ytbot/README.md), [migration](MIGRATION.md),
 [verification](VERIFICATION.md). `AGENTS.md` is the short navigation/policy entry point.
+
+
+`tools/ytbot/preflight.py` inspects read-only Google/ChatGPT readiness with fixed state codes.
+`generation.py` reuses the existing assets/render pipeline without the upload stage.
+`service_jobs.py` keeps generation and scheduled-publication modes distinct under the same
+operation/admission fences and independent media resource unit. Original batch defaults remain.

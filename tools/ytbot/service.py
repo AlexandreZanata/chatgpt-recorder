@@ -23,6 +23,11 @@ def parser() -> argparse.ArgumentParser:
     submit.add_argument("--account", required=True)
     submit.add_argument("--count", type=int, required=True)
     submit.add_argument("--approved-schedule", action="store_true")
+    generate = commands.add_parser("generate")
+    generate.add_argument("--operation-id", required=True)
+    generate.add_argument("--channel", choices=sorted(channels.CHANNELS), required=True)
+    generate.add_argument("--count", type=int, required=True)
+    generate.add_argument("--approved-generation", action="store_true")
     for verb in ["status", "_execute"]:
         command = commands.add_parser(verb)
         command.add_argument("--operation-id", required=True)
@@ -39,6 +44,7 @@ def dispatch(args) -> dict | None:
                 "youtube.profiles.list",
                 "youtube.runs.list",
                 "youtube.batch.submit",
+                "youtube.batch.generate",
                 "youtube.batch.status",
             ],
         }
@@ -58,6 +64,12 @@ def dispatch(args) -> dict | None:
             args.count,
             args.approved_schedule,
         )
+    if args.command == "generate":
+        store = AccountStore()
+        binding = store.load()["bindings"].get(args.channel, {})
+        account = binding.get("account_id", "legacy")
+        return service_jobs.submit(args.operation_id, args.channel, account, args.count, False,
+                                   mode="generate", approved_generate=args.approved_generation, store=store)
     if args.command == "status":
         return service_jobs.status(args.operation_id)
     if args.command == "_execute":

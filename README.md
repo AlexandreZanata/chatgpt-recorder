@@ -85,3 +85,9 @@ This runs strict extension lint, Python compilation, existing/new Node and Pytho
 both extension packaging checks and a Git-visible private-path/key guard. Tests use fake
 accounts and never publish videos or contact live Google services. GPU/model/physical
 Google sign-in acceptance is separate from hermetic tests. See [verification](docs/VERIFICATION.md).
+
+
+ZaturoBot can also request generation-only batches through the fixed service CLI. The
+actor verifies the dedicated Google/ChatGPT sessions before work and returns precise
+bounded readiness errors. Generation does not upload or schedule. See
+[service contracts](docs/SERVICE.md); existing extension/studio/upload commands are unchanged.

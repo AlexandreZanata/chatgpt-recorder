@@ -77,6 +77,7 @@ def runs(channel: str, limit: int = 20) -> list[dict]:
             if upload.get("scheduled")
             else "error"
             if "error" in states
+            else "ready" if "render" in stages and (path.parent / "video.mp4").is_file()
             else "in_progress"
         )
         artifacts = [

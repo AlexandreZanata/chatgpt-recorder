@@ -550,3 +550,23 @@ class ServiceContracts(AccountFixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+class GenerationAdmissionContracts(AccountFixture):
+    def test_generation_requires_its_own_approval_and_keeps_publication_disabled(self):
+        operation = str(uuid.uuid4())
+        launched = []
+        arguments = dict(operation_id=operation, channel="fallem-prince", account="work", count=4,
+                         approved_schedule=False, mode="generate", store=self.store,
+                         unit_probe=lambda _operation: False, launcher=lambda *_a, **_k: launched.append(1))
+        with self.assertRaises(ValueError):
+            service_jobs.submit(**arguments)
+        first = service_jobs.submit(**arguments, approved_generate=True)
+        second = service_jobs.submit(**arguments, approved_generate=True)
+        self.assertEqual(first["operation_id"], second["operation_id"])
+        self.assertEqual(first["mode"], "generate")
+        self.assertEqual(len(launched), 1)
+        stored = read_private(service_jobs.jobs_root() / (operation + ".json"))
+        self.assertFalse(stored["request"]["approved_schedule"])
+        self.assertTrue(stored["request"]["approved_generate"])
+        with self.assertRaises(ValueError):
+            service_jobs.submit(**{**arguments, "mode": "schedule", "approved_schedule": True})
