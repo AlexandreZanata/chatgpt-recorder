@@ -28,3 +28,8 @@ Google Desktop OAuth client, verify accessible channels and run an explicitly au
 production batch with the target GPU/browser. Tests do not claim that a physical account
 is connected or that a real video was published. Optional Qwen/GPU engines retain their
 existing setup and model downloads; fixture checks do not validate their installed weights.
+
+The CI installs the official CPU PyTorch wheel for the existing studio's eager torch
+import; this is a test dependency, not a GPU/model substitution. The canonical scheduling
+timezone is applied by CLI/service entry points and test execution, preserving Cuiaba
+slots on a work PC whose OS timezone differs. The global OS timezone is never changed.

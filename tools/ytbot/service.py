@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from . import channels
+from . import channels, config
 from .accounts_store import AccountStore
 from . import library, service_jobs
 
@@ -67,6 +67,7 @@ def dispatch(args) -> dict | None:
 
 
 def main() -> int:
+    config.configure_timezone()
     args = parser().parse_args()
     try:
         result = dispatch(args)

@@ -24,6 +24,7 @@ silently substituted with another model or voice.
 
 ```bash
 python3 -m venv .venv
+# Select the official PyTorch CPU/CUDA wheel appropriate for this PC first.
 .venv/bin/python -m pip install -r requirements-desktop.txt
 .venv/bin/python app_desktop.py
 ```

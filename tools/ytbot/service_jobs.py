@@ -127,6 +127,7 @@ ACTOR_ENVIRONMENT = {
     "PATH",
     "LANG",
     "LC_ALL",
+    "TZ",
     "PYTHONPATH",
     "DISPLAY",
     "WAYLAND_DISPLAY",

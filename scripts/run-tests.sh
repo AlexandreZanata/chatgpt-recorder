@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+export TZ="$(python3 -c 'from tools.ytbot.config import TIMEZONE; print(TIMEZONE)')"
 
 if [[ -d "./tests" ]] && find ./tests -type f \( -name '*.test.js' -o -name '*.test.mjs' \) -print 2>/dev/null | grep -q .; then
   echo "[test] Running node --test suite..."

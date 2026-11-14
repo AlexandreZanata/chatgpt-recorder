@@ -83,5 +83,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    config.configure_timezone()
     args = build_parser().parse_args()
     args.func(args)

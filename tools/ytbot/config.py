@@ -53,10 +53,17 @@ def apply_channel(channel) -> None:
     CHANNEL = channel
     CHANNEL_NAME = channel.name
     CHANNEL_ID = channel.channel_id
-    CHANNEL_HANDLE = f"https://www.youtube.com/{channel.handle}/videos" if channel.handle else ""
-    STUDIO_UPLOAD = (f"https://studio.youtube.com/channel/{CHANNEL_ID}/videos/upload"
-                     if CHANNEL_ID else "https://studio.youtube.com/")
-    DATA_DIR = DATA if channel.slug == "fallem-prince" else DATA / "channels" / channel.slug
+    CHANNEL_HANDLE = (
+        f"https://www.youtube.com/{channel.handle}/videos" if channel.handle else ""
+    )
+    STUDIO_UPLOAD = (
+        f"https://studio.youtube.com/channel/{CHANNEL_ID}/videos/upload"
+        if CHANNEL_ID
+        else "https://studio.youtube.com/"
+    )
+    DATA_DIR = (
+        DATA if channel.slug == "fallem-prince" else DATA / "channels" / channel.slug
+    )
     RUNS = DATA_DIR / "runs"
     RECORDS = DATA_DIR / "records"
     CATALOG = DATA_DIR / "catalog.json"
@@ -77,3 +84,12 @@ def set_channel_id(channel_id: str) -> None:
 
 def prompt(name: str) -> str:
     return (PROMPTS / name).read_text(encoding="utf-8").strip()
+
+
+def configure_timezone() -> None:
+    """Apply the existing channel scheduling timezone inside this process, not the OS."""
+    import os
+    import time
+
+    os.environ["TZ"] = TIMEZONE
+    time.tzset()

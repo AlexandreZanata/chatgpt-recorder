@@ -10,6 +10,7 @@ jobs:
     timeout-minutes: 20
     env:
       QT_QPA_PLATFORM: offscreen
+      TZ: America/Cuiaba
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +27,7 @@ jobs:
       - name: Install test dependencies
         run: |
           npm ci
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -r requirements-desktop.txt
       - name: Verify preserved and new workflows
         run: npm run verify
